@@ -6,9 +6,12 @@ using Dates
 using Images, TestImages, Colors
 using OffsetArrays
 ##
+include("aux_funs.jl")
+using .Aux
+##
 CUDA.allowscalar(false)
 ##
-function convolution(n, A, filter, outs, kdim)
+function convolution(n, A, ckern, outs, kdim)
 
     indx = (blockIdx().x - 1) * blockDim().x + threadIdx().x
     stridex = blockDim().x * gridDim().x
@@ -27,7 +30,8 @@ function convolution(n, A, filter, outs, kdim)
         for s in j_minus:j_plus, t in i_minus:i_plus
             s1 = s - j + (ran + 1)
             t1 = t - i + (ran + 1)
-            outs[i, j] += (A[s, t] * filter[s1, t1])
+            outs[i, j] += (A[s, t] * ckern[s1, t1])
+            # @cuprintln(s1, " ", t1)
         end
 
     end
@@ -56,21 +60,25 @@ function setup_convolution(n::Int64)
     return conv
 end
 
-function loop_conv(niter, A, filter, kdim)
+function loop_conv(niter, A, ckern, kdim)
+    seq = [A]
     for i in 1:niter
         outs = CUDA.zeros(n, n)
-        # @cuda blocks = (numblocks, numblocks) threads = (threads, threads) convolution(n, A, filter, outs, kdim)
-        conv(n, A, filter, outs, kdim)
-        A = outs
+        # @cuda blocks = (numblocks, numblocks) threads = (threads, threads) convolution(n, A, ckern, outs, kdim)
+        # conv(n, A, ckern, outs, kdim)
+        conv(n, seq[end], ckern, outs, kdim)
+        push!(seq, outs)
+        # A = outs
     end
-    return A
+    return seq
 end
 
 img = testimage("mandril");
 img = Gray.(img);
-img = imrotate(imresize(img, ratio=2 / 3), π);
+# img = imrotate(imresize(img, ratio=2 / 3), π);
+img = imresize(img, ratio=2 / 3)
 ##
-img = OffsetArray(img, 1:344, 1:344)
+img = OffsetArray(img, 1:342, 1:342)
 img = convert(Array{Float64}, img);
 A = cu(img)
 ##
@@ -81,32 +89,35 @@ n, = size(img)
 # heatmap(A)
 ##
 outs = CUDA.zeros(n, n)
-ckern = cu([0.5 0.5 0.5 0.5 0.5;
-             0.5 1. 1 1 0.5; 
-             1 1 1 1 1; 
-             0.5 1 1 1 0.5; 
-             0.5 0.5 0.5 0.5 0.5] ./ 18)
-
-kdim, = size(ckern)
 ##
-# filter=CuDeviceArray((3, 3), [1. 1 1; 1 1 1; 1 1 1] ./ 9)
+# ckern = cu([0.5 0.5 0.5 0.5 0.5;
+#             0.5 1. 1 1 0.5; 
+#             1 1 1 1 1; 
+#             0.5 1 1 1 0.5; 
+#             0.5 0.5 0.5 0.5 0.5] ./ 18)
+##
+ckern = cu([1 1 1; 1 1 1; 1 1 1]) ./ 9
+kdim, = size(ckern)
+
 ##
 conv = setup_convolution(n)
 ##
+# output = loop_conv(10, A, ckern, kdim)
 
 ##
-# conv(n, A, filter, outs, kdim) = @cuda blocks = (numblocks, numblocks) threads = (threads, threads) convolution(n, A, filter, outs, kdim)
+# hostouts = Array(output)
 ##
+# heatmap(hostouts, clims=(0, 1))
 ##
-output = loop_conv(10, A, ckern, kdim)
+# conv(n, A, ckern, outs, 5)
+##
+output = loop_conv(100, A, ckern, kdim)
+##
+
+hostouts = Array.(output)
 
 ##
-hostouts = Array(output)
+
 ##
-heatmap(hostouts, clims=(0, 1))
-##
-output = loop_conv(100, output, ckern, kdim)
-##
-hostouts = Array(output)
-heatmap(hostouts, clims=(0, 1))
+make_gif(hostouts, fps=10)
 ##

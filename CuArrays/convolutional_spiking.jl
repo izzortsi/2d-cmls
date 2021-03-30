@@ -45,6 +45,8 @@ const n = 250
 
 conv = setup_convolution(n)
 ##
+
+##
 # conv(n, nS + r * S, ckern, outs, kdim)
 ##
 bin = 0.93
@@ -55,14 +57,15 @@ k = 0.0
 b = 1.01
 a = 0.909
 
-niter = 30
+niter = 200
 
 # alternative kernels
 # ckern = [b*a b b*a; b 0 b; b*a b b*a] |> CuArray
 # ckern = [b*a b b*a; b e*b b; b*a b b*a] |> CuArray
 # ckern = [1. 1 1; 1 0 1; 1 1 1] |> CuArray
 ckern = cu([b * a b b * a; b e * b b; b * a b b * a])
-ckern ./= sum(ckern)
+ρ = sum(ckern) / 2
+ckern ./= ρ
 ##
 kdim, = size(ckern)
 ##
@@ -81,6 +84,7 @@ harr(nS)
 harr(nS + (r * S))
 ##
 conv(n, nS + r * S, ckern, convolved, kdim) # the spiking neuron have a 1.3fold greater influence over its neighbors
+convolved ./= ρ
 harr(convolved)
 ##
 init_state = e * (nS + k * S) + (1 - e) * convolved # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
@@ -89,16 +93,10 @@ harr(init_state)
 ##
 state_seq[end] == state_seq[end - 1]
 ##
-flist = frames(init_state, niter; ckern=ckern)
+flist = frames(init_state, niter; ckern=ckern, r=1.1)
 
-##
-host_outs
 ##
 host_outs = Array.(flist)
-
-length(host_outs)
-##
 opath = pwd()
-opath
 ##
-Aux.make_gif(host_outs, fps=8, path=opath)
+make_gif(host_outs, fps=8, path=opath)
