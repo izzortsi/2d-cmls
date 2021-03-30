@@ -34,19 +34,37 @@ function convolution(n, A, filter, outs, kdim)
 
     return nothing
 end
-##
-5 ÷ 2
-##
-function loop_filter(niter, A, filter, kdim)
+
+"""
+n is the size of the square n by n matrix that will be worked on
+"""
+function setup_kernel(n::Int64)
+    dev = CuDevice(0)
+    
+    max_threads = attribute(dev, CUDA.DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK)
+    max_threads_per_dim = sqrt(max_threads) / 2 |> Int
+    
+    numblocks = ceil(Int, n / max_threads_per_dim)
+    threads = n ÷ numblocks
+    
+    return numblocks, threads
+end
+
+function setup_convolution(n::Int64)
+    numblocks, threads = setup_kernel(n)
+    conv(n, A, filter, outs, kdim) = @cuda blocks = (numblocks, numblocks) threads = (threads, threads) convolution(n, A, filter, outs, kdim)
+    return conv
+end
+
+function loop_conv(niter, A, filter, kdim)
     for i in 1:niter
         outs = CUDA.zeros(n, n)
-        @cuda blocks = (numblocks, numblocks) threads = (threads, threads) convolution(n, A, filter, outs, kdim)
+        # @cuda blocks = (numblocks, numblocks) threads = (threads, threads) convolution(n, A, filter, outs, kdim)
+        conv(n, A, filter, outs, kdim)
         A = outs
     end
     return A
 end
-
-##
 
 img = testimage("mandril");
 img = Gray.(img);
@@ -59,40 +77,36 @@ A = cu(img)
 n, = size(img)
 
 ##
-dev = CuDevice(0)
-
-max_threads = attribute(dev, CUDA.DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK)
-max_threads_per_dim = sqrt(max_threads) / 2 |> Int
-
-numblocks = ceil(Int, n / max_threads_per_dim)
-threads = n ÷ numblocks
 ##
 # heatmap(A)
 ##
 outs = CUDA.zeros(n, n)
-filter = cu([0.5 0.5 0.5 0.5 0.5;
+ckern = cu([0.5 0.5 0.5 0.5 0.5;
              0.5 1. 1 1 0.5; 
              1 1 1 1 1; 
              0.5 1 1 1 0.5; 
              0.5 0.5 0.5 0.5 0.5] ./ 18)
 
-kdim, = size(filter)
+kdim, = size(ckern)
 ##
 # filter=CuDeviceArray((3, 3), [1. 1 1; 1 1 1; 1 1 1] ./ 9)
 ##
+conv = setup_convolution(n)
+##
 
 ##
-conv(n, A, filter, outs, kdim) = @cuda blocks = (numblocks, numblocks) threads = (threads, threads) convolution(n, A, filter, outs, kdim)
+# conv(n, A, filter, outs, kdim) = @cuda blocks = (numblocks, numblocks) threads = (threads, threads) convolution(n, A, filter, outs, kdim)
 ##
 ##
-output = loop_filter(10, A, filter, kdim)
+output = loop_conv(10, A, ckern, kdim)
 
 ##
 hostouts = Array(output)
 ##
 heatmap(hostouts, clims=(0, 1))
 ##
-output = loop_filter(100, output, filter)
+output = loop_conv(100, output, ckern, kdim)
 ##
-heatmap(output, clims=(0, 1))
+hostouts = Array(output)
+heatmap(hostouts, clims=(0, 1))
 ##
