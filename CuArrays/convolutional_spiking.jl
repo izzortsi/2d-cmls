@@ -35,7 +35,6 @@ function frames(
         spike = nS + (r * S)
         conv(n, spike, ckern, convolved, kdim) # the spiking neuron have a 1.3fold greater influence over its neighbors
         state = e * (nS + (k * S)) + (1 - e) * convolved # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
-        # state = e * (r * nS + (k * S)) + (1 - e) * (S + nS) # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
         # state = e * (( r * nS) + (k * S)) + (1 - e) * convolved # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
         push!(state_seq, deepcopy(state))
     end
@@ -48,18 +47,18 @@ conv = setup_convolution(n)
 ##
 bin = 0.93
 e = 0.66
-r = 1.3
+r = 1.1
 k = 0.0
 
 b = 1.01
 a = 0.909
 ρ = 1.5
 
-niter = 50
+niter = 300
 ##
 
 ##
-# alternative kernels
+# alternative kernel patterns
 # ckern = [b*a b b*a; b 0 b; b*a b b*a] |> CuArray
 # ckern = [b*a b b*a; b e*b b; b*a b b*a] |> CuArray
 # ckern = [1. 1 1; 1 0 1; 1 1 1] |> CuArray
@@ -69,7 +68,7 @@ ckern = cu(eval(ckern_expr))
 ckern ./= (sum(ckern) / ρ)
 ##
 init_state = CUDA.rand(n, n)
-flist, params = frames(init_state, 300; ckern=ckern, r=1.1, e=0.66)
+flist, params = frames(init_state, niter; ckern=ckern, r=r)
 host_outs = Array.(flist)
 ##
 opath = pwd() * "/CuArrays/outputs/conv_spiking/"
