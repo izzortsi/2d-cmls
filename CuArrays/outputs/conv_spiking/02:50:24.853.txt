@@ -1,0 +1,7 @@
+e: 0.66
+bin: 0.93
+k: 0.0
+b: 1.01
+r: 1.1
+a: 0.909
+kerpattern: [b * a b b * a; b e * b b; b * a b b * a]

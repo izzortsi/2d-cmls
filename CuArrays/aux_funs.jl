@@ -1,7 +1,7 @@
 module Aux
 using Plots, LinearAlgebra, CUDA, Dates
 
-export make_gif
+export make_gif, harr
 
 function vn_neighborhood()
     return
@@ -45,7 +45,7 @@ function frames(n, F, r0, A, scheme, outs; distances=false, frobenius=false, ste
     return frames_list
 end
 
-function make_gif(clist; path::String="~", fps=2)
+function make_gif(clist; path::String="~", filename="$(Dates.Time(Dates.now()))", fps=2)
     steps = length(clist)
     anim = @animate for i = 1:steps
 
@@ -54,7 +54,9 @@ function make_gif(clist; path::String="~", fps=2)
 
     end every 1
     ct = "heatmap"
-    gif(anim, "$(path)/$(Dates.Time(Dates.now())).gif", fps=fps)
+    gif(anim, "$(path)/$(filename).gif", fps=fps)
 end
+
+harr = ((x -> heatmap(x, clims=(0, 1))) ∘ Array)
 
 end

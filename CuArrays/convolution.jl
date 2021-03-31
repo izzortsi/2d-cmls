@@ -14,14 +14,14 @@ function convolution(n, A, ckern, outs, kdim)
     for i in indx:stridex:n, j in indy:stridey:n
         ran = kdim ÷ 2
         # indices for the neighbors
-        j_minus = mod1(j - ran, n)
-        j_plus = mod1(j + ran, n)
         i_minus =  mod1(i - ran, n)
         i_plus = mod1(i + ran, n)
+        j_minus = mod1(j - ran, n)
+        j_plus = mod1(j + ran, n)
 
-        for s in j_minus:j_plus, t in i_minus:i_plus
-            s1 = s - j + (ran + 1)
-            t1 = t - i + (ran + 1)
+        for s in i_minus:i_plus, t in j_minus:j_plus
+            s1 = s - i + (ran + 1)
+            t1 = t - j + (ran + 1)
             outs[i, j] += (A[s, t] * ckern[s1, t1])
         end
 

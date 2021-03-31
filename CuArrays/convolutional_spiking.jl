@@ -14,7 +14,7 @@ using .Aux
 ##
 CUDA.allowscalar(false)
 ##
-harr = ((x -> heatmap(x, clims=(0, 1))) ∘ Array)
+
 ##
 function frames(
     state, niter; 
@@ -24,30 +24,27 @@ function frames(
     r=1.3, 
     k=0.0
     )
-
+    params = Dict{String,Any}(["bin" => bin, "e" => e, "r" => r, "k" => k])
     kdim, = size(ckern)
-    state_seq = []
+    state_seq = [state]
     for i = 1:niter
+        state = state_seq[end]
         convolved = CUDA.zeros(n, n)
         S = (state .>= bin) .* state # the spiking neurons
         nS = (state .< bin) .* state # the complimentary matrix
-
-        conv(n, nS + r * S, ckern, convolved, kdim) # the spiking neuron have a 1.3fold greater influence over its neighbors
-
-        state = e * (nS + k * S) + (1 - e) * convolved # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
-        push!(state_seq, state)
+        spike = nS + (r * S)
+        conv(n, spike, ckern, convolved, kdim) # the spiking neuron have a 1.3fold greater influence over its neighbors
+        state = e * (nS + (k * S)) + (1 - e) * convolved # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
+        # state = e * (r * nS + (k * S)) + (1 - e) * (S + nS) # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
+        # state = e * (( r * nS) + (k * S)) + (1 - e) * convolved # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
+        push!(state_seq, deepcopy(state))
     end
-    return state_seq
+    return state_seq, params
 end
 ##
 const n = 250
 ##
-
 conv = setup_convolution(n)
-##
-
-##
-# conv(n, nS + r * S, ckern, outs, kdim)
 ##
 bin = 0.93
 e = 0.66
@@ -56,47 +53,35 @@ k = 0.0
 
 b = 1.01
 a = 0.909
+ρ = 1.5
 
-niter = 200
+niter = 50
+##
 
+##
 # alternative kernels
 # ckern = [b*a b b*a; b 0 b; b*a b b*a] |> CuArray
 # ckern = [b*a b b*a; b e*b b; b*a b b*a] |> CuArray
 # ckern = [1. 1 1; 1 0 1; 1 1 1] |> CuArray
-ckern = cu([b * a b b * a; b e * b b; b * a b b * a])
-ρ = sum(ckern) / 2
-ckern ./= ρ
 ##
-kdim, = size(ckern)
+ckern_expr = :([b * a b b * a; b e * b b; b * a b b * a])
+ckern = cu(eval(ckern_expr))
+ckern ./= (sum(ckern) / ρ)
 ##
-state_seq = []
 init_state = CUDA.rand(n, n)
-##
-convolved = CUDA.zeros(n, n)
-##
-S = (init_state .>= bin) .* init_state # the spiking neurons
-nS = (init_state .< bin) .* init_state # the complimentary matrix
-##
-harr(S)
-##
-harr(nS)
-##
-harr(nS + (r * S))
-##
-conv(n, nS + r * S, ckern, convolved, kdim) # the spiking neuron have a 1.3fold greater influence over its neighbors
-convolved ./= ρ
-harr(convolved)
-##
-init_state = e * (nS + k * S) + (1 - e) * convolved # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
-push!(state_seq, init_state)
-harr(init_state)
-##
-state_seq[end] == state_seq[end - 1]
-##
-flist = frames(init_state, niter; ckern=ckern, r=1.1)
-
-##
+flist, params = frames(init_state, 300; ckern=ckern, r=1.1, e=0.66)
 host_outs = Array.(flist)
-opath = pwd()
 ##
-make_gif(host_outs, fps=8, path=opath)
+opath = pwd() * "/CuArrays/outputs/conv_spiking/"
+mkpath(opath)
+push!(params, "a" => a)
+push!(params, "b" => b)
+push!(params, "kerpattern" => string(ckern_expr))
+##
+filename = "$(Dates.Time(Dates.now()))"
+open(opath * filename * ".txt", "w") do io  
+    for (key, val) in params
+        println(io, "$key: $val")
+    end
+end
+make_gif(host_outs, fps=8, path=opath, filename=filename)
