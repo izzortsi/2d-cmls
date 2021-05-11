@@ -65,7 +65,7 @@ host_outs = Array.(flist)
 opath = pwd() * "/CuArrays/outputs/chaotic/"
 mkpath(opath)
 ##
-filename = "$(Dates.Time(Dates.now()))"
+filename = replace("$(Dates.Time(Dates.now()))", ":" => "_")
 open(opath * filename * ".txt", "w") do io  
     for (key, val) in params
         println(io, "$key: $val")
