@@ -14,8 +14,6 @@ using .Aux
 ##
 CUDA.allowscalar(false)
 ##
-
-##
 function frames(
     state, niter; 
     ckern=cu([1. 1 1; 1 0 1; 1 1 1]), 
@@ -23,7 +21,7 @@ function frames(
     e=0.66, 
     r=1.3, 
     k=0.0
-    )
+        )
     params = Dict{String,Any}(["bin" => bin, "e" => e, "r" => r, "k" => k])
     kdim, = size(ckern)
     state_seq = [state]
@@ -41,7 +39,7 @@ function frames(
     return state_seq, params
 end
 ##
-const n = 250
+const n = 1000
 ##
 conv = setup_convolution(n)
 ##
@@ -68,8 +66,9 @@ ckern = cu(eval(ckern_expr))
 ckern ./= (sum(ckern) / ρ)
 ##
 init_state = CUDA.rand(n, n)
-flist, params = frames(init_state, niter; ckern=ckern, r=r)
-host_outs = Array.(flist)
+##
+@elapsed flist, params = frames(init_state, niter; ckern=ckern, r=r)
+@elapsed host_outs = Array.(flist)
 ##
 opath = pwd() * "/CuArrays/outputs/conv_spiking/"
 mkpath(opath)
@@ -77,10 +76,11 @@ push!(params, "a" => a)
 push!(params, "b" => b)
 push!(params, "kerpattern" => string(ckern_expr))
 ##
-filename = "$(Dates.Time(Dates.now()))"
+filename = replace("$(Dates.Time(Dates.now()))", ":" => "_") 
 open(opath * filename * ".txt", "w") do io  
     for (key, val) in params
         println(io, "$key: $val")
     end
 end
+##
 make_gif(host_outs, fps=8, path=opath, filename=filename)
