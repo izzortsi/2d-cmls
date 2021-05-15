@@ -1,21 +1,25 @@
 # %%
 using Random
 using DifferentialEquations
+using GLMakie
+
+# %%
+using CUDA
 # %%
 Random.seed!(0)
 # %%
 
-n = 5  
+n = 100  
 N = n ^ 2
-K = 1
-ω = rand(n, n) * 2 * π
-dθ = rand(n, n) * 2 * π
+K = 2
+ω = rand(n, n) * 2 * π |> cu
+dθ = rand(n, n) * 2 * π |> cu
 # %%
 
 function kuramoto!(dθ, p, t)
     
     for i in 1:length(enumerate(dθ))
-        dθ[i] = ω[i] - ((K / N) * sum(sin.(dθ[i] .- dθ)))
+        dθ[i] = ω[i] + ((K / N) * sum(sin.(dθ .- dθ[i])))
     #        print((K / N) * np.sum(np.sin(θ_i - θ)), dθ[i])
         #println(i, " ", dθ[i])
     end
@@ -24,41 +28,32 @@ end
 # %%
 
 
-tspan = (0.0,2.0)
+tspan = (0.0,10.0)
 prob = ODEProblem(kuramoto!, dθ, tspan)
 # %%
 
 sol = solve(prob)   
 
 # %%
+# for (i, u) in enumerate(sol.u[end-50:end])
+#     if i > 1
+#         println(sum(u[i]-u[i-1]))
+#     end
+# end
 
 
 
 # %%
-using GLMakie
-using AbstractPlotting.Colors
-
-# %%
-
-# %%
-
-# %%
-# %%
-
 fig, ax, hm = heatmap(sol.u[1])
-# %%
-
-# %%
-
-# %%
-# animation settings
 n_frames = length(sol.t)
-framerate = 3
+framerate = n_frames ÷ 7
 
 # %%
-record(fig, "test.gif") do io
-    for i = n_frames
-        hm[1] = sol.u[i]
+
+
+record(fig, "test.mp4", framerate=framerate) do io
+    for i = 1:n_frames
+        heatmap!(sol.u[i])
         recordframe!(io)  # record a new frame
     end
 end
