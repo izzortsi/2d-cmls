@@ -1,19 +1,19 @@
 # %%
 using Random
 using DifferentialEquations
-using GLMakie
-
+#using GLMakie
+using Plots
 # %%
 #using CUDA
 #CUDA.allowscalar(false)
 # %%
-using GPUifyLoops
+
 # %%
 
 Random.seed!(0)
 # %%
 
-n = 100
+n = 50
 N = n ^ 2
 K = 2
 ω = rand(n, n) * 2 * π #|> cu
@@ -22,19 +22,17 @@ dθ = rand(n, n) * 2 * π # |> cu
 
 function kuramoto!(dθ, p, t)
     
-    @loop for i in (1:size(dθ, 1); threadIdx().x)
+    for i in 1:N
         dθ[i] = ω[i] + ((K / N) * sum(sin.(dθ .- dθ[i])))
-    #        print((K / N) * np.sum(np.sin(θ_i - θ)), dθ[i])
-        #println(i, " ", dθ[i])
     end
-    @synchronize
+    
     dθ
 end
 # %%
 kuramoto!(dθ, nothing, nothing)
 # %%
 
-tspan = (0.0,15.0)
+tspan = (0.0,5.0)
 
 prob = ODEProblem(kuramoto!, dθ, tspan)
 # %%
@@ -48,13 +46,26 @@ sol = solve(prob);
 #     end
 # end
 
+n_frames = length(sol.t)
+
+# %%
+
+# %%
+
+# %%
+
+for i in 1:n_frames
+    fig = heatmap(sol.u[i], clims=(0, 2π))    
+    savefig(fig, "frame$(i).png")
+end
+# %%
 
 
 # %%
-fig, ax, hm = heatmap(sol.u[1])
-n_frames = length(sol.t)
-framerate = n_frames ÷ 7
-ax[1]
+# fig, ax, hm = heatmap(sol.u[1])
+# n_frames = length(sol.t)
+# framerate = n_frames ÷ 7
+# ax[1]
 # %%
 
 
@@ -69,8 +80,8 @@ ax[1]
 #     println(sum(sol.u[i] - sol.u[i-1]))
 # end
 # %%
-for i in 1:n_frames
-    fig, ax, hm = heatmap(sol.u[i])    
-    save("frame$(i).png", fig)
-end
-heatmap(sol.u[20])
+# for i in 1:n_frames
+#     fig, ax, hm = heatmap(sol.u[i])    
+#     save("frame$(i).png", fig)
+# end
+# heatmap(sol.u[20])
