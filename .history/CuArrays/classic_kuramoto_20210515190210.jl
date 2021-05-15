@@ -70,7 +70,6 @@ ax[1]
 # end
 # %%
 for i in 1:n_frames
-    fig, ax, hm = heatmap(sol.u[i])    
-    save("frame$(i).png", fig)
+    heatmap!(sol.u[i])    
+    save("frame$(i).png", ax)
 end
-heatmap(sol.u[20])

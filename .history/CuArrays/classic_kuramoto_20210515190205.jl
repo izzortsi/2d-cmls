@@ -60,7 +60,7 @@ ax[1]
 
 # record(fig, "test.mp4", framerate=framerate) do io
 #     for i = 1:n_frames
-#         heatmap!(sol.u[i])    
+#        heatmap!(sol.u[i])    
 #         recordframe!(io)  # record a new frame
 #     end
 # end
@@ -70,7 +70,6 @@ ax[1]
 # end
 # %%
 for i in 1:n_frames
-    fig, ax, hm = heatmap(sol.u[i])    
-    save("frame$(i).png", fig)
+    heatmap!(sol.u[i])    
+    save("frame$(i).png", ax)
 end
-heatmap(sol.u[20])
