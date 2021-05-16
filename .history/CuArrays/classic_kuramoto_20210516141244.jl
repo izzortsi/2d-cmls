@@ -10,13 +10,13 @@ using Plots
 
 # %%
 
-Random.seed!(1234)
+Random.seed!(0)
 # %%
 
 # %%
 
 
-n = 2^6
+n = 50
 const N = n ^ 2
 const K = 2
 ω = randn(n, n) 
@@ -35,7 +35,7 @@ end
 
 # %%
 
-tspan = (0.0,4.0)
+tspan = (0.0,5.0)
 
 prob = ODEProblem(kuramoto!, θ, tspan)
 # %%

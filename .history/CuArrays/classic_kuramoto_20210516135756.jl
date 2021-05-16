@@ -10,13 +10,13 @@ using Plots
 
 # %%
 
-Random.seed!(1234)
+Random.seed!(0)
 # %%
 
 # %%
 
 
-n = 2^6
+n = 50
 const N = n ^ 2
 const K = 2
 ω = randn(n, n) 
@@ -26,7 +26,7 @@ const K = 2
 
 function kuramoto!(dθ, θ, p, t)
     for i in 1:N
-    dθ[i] = (ω[i] + (K/N)*sum(sin.(θ .- θ[i])))
+    dθ[i] += (ω[i] + (K/N)*sum(sin.(θ .- θ[i])))
     end
 end
 # %%
@@ -35,7 +35,7 @@ end
 
 # %%
 
-tspan = (0.0,4.0)
+tspan = (0.0,5.0)
 
 prob = ODEProblem(kuramoto!, θ, tspan)
 # %%
@@ -63,7 +63,7 @@ sol.u[end] == sol.u[end-1]
 # %%
 
 for i in 1:n_frames
-    fig = heatmap(sol.u[i])#, clims=(0, 2π))    
+    fig = heatmap(sol.u[i], clims=(nmin, nmax))#, clims=(0, 2π))    
     savefig(fig, "frame$(i).png")
 end
 # %%

@@ -35,7 +35,7 @@ end
 
 # %%
 
-tspan = (0.0,4.0)
+tspan = (0.0,2.0)
 
 prob = ODEProblem(kuramoto!, θ, tspan)
 # %%

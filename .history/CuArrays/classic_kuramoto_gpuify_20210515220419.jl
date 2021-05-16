@@ -3,44 +3,47 @@ using Random
 using DifferentialEquations
 #using GLMakie
 using Plots
-# %%
-#using CUDA
-#CUDA.allowscalar(false)
-# %%
+using KernelAbstractions
 
-# %%
-
-Random.seed!(1234)
 # %%
 
 # %%
 
-
-n = 2^6
-const N = n ^ 2
-const K = 2
-ω = randn(n, n) 
-θ = randn(n, n) 
+Random.seed!(0)
+# %%
 
 # %%
 
-function kuramoto!(dθ, θ, p, t)
-    for i in 1:N
-    dθ[i] = (ω[i] + (K/N)*sum(sin.(θ .- θ[i])))
-    end
+
+n = 50
+N = n ^ 2
+K = 2
+ω = rand(n, n) * 2 * π |> cu
+dθ = rand(n, n) * 2 * π |> cu
+# %%
+n = size(dθ, 1)
+# %%
+
+# %%
+
+function kuramoto!(dθ, p, t)
+    kura_gpu!(dθ, p, t)
+    dθ
 end
 # %%
 
-
-
+# %%
 # %%
 
-tspan = (0.0,4.0)
-
-prob = ODEProblem(kuramoto!, θ, tspan)
+kuramoto!(dθ, ω, 1)
 # %%
 
-sol = solve(prob, adaptive=false, dt=0.1);   
+tspan = (0.0,5.0)
+
+prob = ODEProblem(kuramoto!, dθ, tspan)
+# %%
+
+sol = solve(prob);   
 
 # %%
 # for (i, u) in enumerate(sol.u[end-50:end])
@@ -54,16 +57,11 @@ n_frames = length(sol.t)
 # %%
 
 # %%
-sol.u[end] == sol.u[end-1]
-# %%
-#nmax = maximum.(sol.u) |> maximum
-#nmin = minimum.(sol.u) |> minimum
-#i = 18
-#fig = heatmap(sol.u[i])
+
 # %%
 
 for i in 1:n_frames
-    fig = heatmap(sol.u[i])#, clims=(0, 2π))    
+    fig = heatmap(sol.u[i], clims=(0, 2π))    
     savefig(fig, "frame$(i).png")
 end
 # %%

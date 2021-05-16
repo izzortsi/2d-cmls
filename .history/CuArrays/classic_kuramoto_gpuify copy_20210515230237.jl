@@ -1,46 +1,67 @@
 # %%
 using Random
-using DifferentialEquations
+#using DifferentialEquations
 #using GLMakie
-using Plots
-# %%
-#using CUDA
-#CUDA.allowscalar(false)
-# %%
+#using Plots
+using CUDA
 
 # %%
-
-Random.seed!(1234)
+CUDA.allowscalar(false)
 # %%
 
+Random.seed!(0)
 # %%
-
-
-n = 2^6
-const N = n ^ 2
-const K = 2
-ω = randn(n, n) 
-θ = randn(n, n) 
 
 # %%
 
-function kuramoto!(dθ, θ, p, t)
-    for i in 1:N
-    dθ[i] = (ω[i] + (K/N)*sum(sin.(θ .- θ[i])))
-    end
+
+n = 16
+N = n ^ 2
+#K = 2
+#ω = rand(n, n) * 2 * π |> cu
+dθ = rand(N) * 2 * π |> cu
+# %%
+
+# %%
+#dyn_sin = CUDA.dynamic_cufunction(CUDA.sin)
+# %%
+
+# %%
+function sin_gpu(x)
+    x = CUDA.sin(x)
+    return
+end
+function kernel(a)
+    i = threadIdx().x
+    dyn_sin = CUDA.dynamic_cufunction(CUDA.sin)
+    dyn_sin(a[i])
+    a[i] += 1
+    return
+end
+
+@cuda threads=length(dθ) kernel(dθ)
+
+
+# %%
+
+function kuramoto!(dθ, p, t)
+    kura_gpu!(dθ, p, t)
+    dθ
 end
 # %%
 
-
-
+# %%
 # %%
 
-tspan = (0.0,4.0)
-
-prob = ODEProblem(kuramoto!, θ, tspan)
+kuramoto!(dθ, ω, 1)
 # %%
 
-sol = solve(prob, adaptive=false, dt=0.1);   
+tspan = (0.0,5.0)
+
+prob = ODEProblem(kuramoto!, dθ, tspan)
+# %%
+
+sol = solve(prob);   
 
 # %%
 # for (i, u) in enumerate(sol.u[end-50:end])
@@ -54,16 +75,11 @@ n_frames = length(sol.t)
 # %%
 
 # %%
-sol.u[end] == sol.u[end-1]
-# %%
-#nmax = maximum.(sol.u) |> maximum
-#nmin = minimum.(sol.u) |> minimum
-#i = 18
-#fig = heatmap(sol.u[i])
+
 # %%
 
 for i in 1:n_frames
-    fig = heatmap(sol.u[i])#, clims=(0, 2π))    
+    fig = heatmap(sol.u[i], clims=(0, 2π))    
     savefig(fig, "frame$(i).png")
 end
 # %%

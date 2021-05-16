@@ -3,6 +3,8 @@ using Random
 using DifferentialEquations
 #using GLMakie
 using Plots
+using Base.Cartesian
+using LinearAlgebra
 # %%
 #using CUDA
 #CUDA.allowscalar(false)
@@ -17,16 +19,32 @@ Random.seed!(1234)
 
 
 n = 2^6
-const N = n ^ 2
-const K = 2
 ω = randn(n, n) 
 θ = randn(n, n) 
+# %%
+const N = n ^ 2
+const K = 2
+const Indices = CartesianIndices(θ)
+const Positions = Tuple.(Indices)
+# %%
+aij = Positions[10, 10]
+# %%
+
+(norm.(map(x-> x.-aij, Positions))).^-2
+# %%
+ω .* θ 
+# %%
+ω * θ 
+# %%
+ω[1] * θ[1]
 
 # %%
 
 function kuramoto!(dθ, θ, p, t)
-    for i in 1:N
-    dθ[i] = (ω[i] + (K/N)*sum(sin.(θ .- θ[i])))
+    for I in Indices
+        x = Positions[I]        
+        euclid_N = (norm.(map(y-> y.-x, Positions))).^-2
+        dθ[I] = (ω[I] + K*sum((euclid_N .* sin.(θ .- θ[I])))
     end
 end
 # %%
