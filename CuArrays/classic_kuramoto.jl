@@ -10,7 +10,7 @@ CUDA.allowscalar(false)
 
 # %%
 
-Random.seed!(0)
+Random.seed!(1234)
 # %%
 
 n = 50
@@ -20,24 +20,32 @@ K = 2
 dθ = rand(n, n) * 2 * π  |> cu
 # %%
 
-function kuramoto!(dθ, p, t)
-    
+
+n = 2^6
+const N = n ^ 2
+const K = 2
+ω = randn(n, n) 
+θ = randn(n, n) 
+
+# %%
+
+function kuramoto!(dθ, θ, p, t)
     for i in 1:N
-        dθ[i] = ω[i] + ((K / N) * sum(sin.(dθ .- dθ[i])))
+    dθ[i] = (ω[i] + (K/N)*sum(sin.(θ .- θ[i])))
     end
-    
-    dθ
 end
 # %%
-kuramoto!(dθ, nothing, nothing)
+
+
+
 # %%
 
-tspan = (0.0,5.0)
+tspan = (0.0,4.0)
 
-prob = ODEProblem(kuramoto!, dθ, tspan)
+prob = ODEProblem(kuramoto!, θ, tspan)
 # %%
 
-sol = solve(prob);   
+sol = solve(prob, adaptive=false, dt=0.1);   
 
 # %%
 # for (i, u) in enumerate(sol.u[end-50:end])
@@ -51,7 +59,12 @@ n_frames = length(sol.t)
 # %%
 
 # %%
-
+sol.u[end] == sol.u[end-1]
+# %%
+#nmax = maximum.(sol.u) |> maximum
+#nmin = minimum.(sol.u) |> minimum
+#i = 18
+#fig = heatmap(sol.u[i])
 # %%
 heatmap(sol.u[1])
 # %%
@@ -66,7 +79,7 @@ gif(anim, "testgif.gif", fps=6)
 
 # %%
 for i in 1:n_frames
-    fig = heatmap(sol.u[i], clims=(0, 2π))    
+    fig = heatmap(sol.u[i])#, clims=(0, 2π))    
     savefig(fig, "frame$(i).png")
 end
 # %%
