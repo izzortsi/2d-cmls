@@ -4,8 +4,8 @@ using DifferentialEquations
 #using GLMakie
 using Plots
 # %%
-#using CUDA
-#CUDA.allowscalar(false)
+using CUDA
+CUDA.allowscalar(false)
 # %%
 
 # %%
@@ -16,8 +16,8 @@ Random.seed!(0)
 n = 50
 N = n ^ 2
 K = 2
-ω = rand(n, n) * 2 * π #|> cu
-dθ = rand(n, n) * 2 * π # |> cu
+ω = rand(n, n) * 2 * π |> cu
+dθ = rand(n, n) * 2 * π  |> cu
 # %%
 
 function kuramoto!(dθ, p, t)
@@ -53,7 +53,18 @@ n_frames = length(sol.t)
 # %%
 
 # %%
+heatmap(sol.u[1])
+# %%
 
+ 
+anim = @animate for i in 1:n_frames
+    heatmap!(sol.u[i], clims=(0, 2π))
+end
+# %%
+gif(anim, "testgif.gif", fps=6)
+  
+
+# %%
 for i in 1:n_frames
     fig = heatmap(sol.u[i], clims=(0, 2π))    
     savefig(fig, "frame$(i).png")
