@@ -12,8 +12,8 @@ function lorenz!(du,u,p,t)
     list_funs = [f1, f2, f3]
     for (i, f) in enumerate(list_funs)
         du[i] = f(u)
-    end
-end
+    
+   end
 
 # %%
 u0 = [1.0;0.0;0.0]
