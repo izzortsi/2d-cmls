@@ -3,6 +3,36 @@ module Convolution
 using CUDA
 export setup_convolution, loop_conv
 
+function extended_convolution(n, A, ckern, kfuns, outs, kdim)
+
+    indx = (blockIdx().x - 1) * blockDim().x + threadIdx().x
+    stridex = blockDim().x * gridDim().x
+
+    indy = (blockIdx().y - 1) * blockDim().y + threadIdx().y
+    stridey = blockDim().y * gridDim().y
+
+    for i in indx:stridex:n, j in indy:stridey:n
+        ran = kdim ÷ 2
+        # indices for the neighbors
+        i_minus =  mod1(i - ran, n)
+        i_plus = mod1(i + ran, n)
+        j_minus = mod1(j - ran, n)
+        j_plus = mod1(j + ran, n)
+
+        for s in i_minus:i_plus, t in j_minus:j_plus
+
+            s1 = s - i + (ran + 1)
+            t1 = t - j + (ran + 1)
+            #outs[i, j] += (A[s, t] * ckern[s1, t1])/sqrt(((i-s1)^2 + (j-s2)^2))
+            outs[i, j] += kfuns[s1, t1]((A[s, t]), ckern[s1, t1])
+        end
+
+    end
+
+    return nothing
+end
+
+
 function convolution(n, A, ckern, outs, kdim)
 
     indx = (blockIdx().x - 1) * blockDim().x + threadIdx().x
@@ -49,10 +79,15 @@ returns a function `conv(n, A, ckern, outs, kdim)`, that performs a convolution 
     `A` is a `n` by `n` `CuArray` and `outs` must be similar to `A`;\\
     `ckern` is a `kdim` by `kdim` `CuArray`;
 """
-function setup_convolution(n::Int64)
+function setup_convolution(n::Int64; is_extended = false)
     numblocks, threads = setup_kernel(n)
-    conv(n, A, ckern, outs, kdim) = @cuda blocks = (numblocks, numblocks) threads = (threads, threads) convolution(n, A, ckern, outs, kdim)
-    return conv
+    if is_extended
+        econv(n, A, ckern, kfuns, outs, kdim) = @cuda blocks = (numblocks, numblocks) threads = (threads, threads) extended_convolution(n, A, ckern, kfuns, outs, kdim)
+        return econv
+    else
+        conv(n, A, ckern, outs, kdim) = @cuda blocks = (numblocks, numblocks) threads = (threads, threads) convolution(n, A, ckern, outs, kdim)
+        return conv
+    end
 end
 
 function loop_conv(niter, A, ckern, kdim)

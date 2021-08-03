@@ -16,11 +16,7 @@ CUDA.allowscalar(false)
 ##
 
 ##
-function frames(
-    state, niter;
-    bin=0.5,  
-    r=1.4173
-    )
+function frames(state, niter; bin = 0.5, r = 1.4173)
     params = Dict{String,Any}(["bin" => bin, "r" => r])
     state_seq = [state]
     for i = 1:niter
@@ -42,12 +38,12 @@ function frames(
 end
 
 function init_state()
-    img = testimage("cam");
-    img = Gray.(img);
-    img = imrotate(imresize(img, ratio=2 / 3), π);
+    img = testimage("cam")
+    img = Gray.(img)
+    img = imrotate(imresize(img, ratio = 2 / 3), π)
     n, m = size(img)
     img = OffsetArray(img, 1:n, 1:m)
-    img = convert(Array{Float64}, img);
+    img = convert(Array{Float64}, img)
     A = cu(img)
     return A
 end
@@ -66,9 +62,15 @@ opath = pwd() * "/CuArrays/outputs/chaotic/"
 mkpath(opath)
 ##
 filename = replace("$(Dates.Time(Dates.now()))", ":" => "_")
-open(opath * filename * ".txt", "w") do io  
+open(opath * filename * ".txt", "w") do io
     for (key, val) in params
         println(io, "$key: $val")
     end
 end
-make_gif(host_outs, fps=8, path=opath, filename=filename)
+##
+make_gif(
+    host_outs,
+    fps = 8,
+    path = opath,
+    filename = filename,
+)
