@@ -1,7 +1,7 @@
 ##
 using CUDA
 using LinearAlgebra
-using Plots
+using GLMakie
 using Dates
 using Images, TestImages, Colors
 using OffsetArrays
@@ -17,10 +17,10 @@ CUDA.allowscalar(false)
 function frames(
     state, niter; 
     ckern=cu([1. 1 1; 1 0 1; 1 1 1]), 
-    bin=0.93, 
+    bin=0.95, 
     e=0.66, 
     r=1.3, 
-    k=0.0
+    k=0.3
         )
     params = Dict{String,Any}(["bin" => bin, "e" => e, "r" => r, "k" => k])
     kdim, = size(ckern)
@@ -33,13 +33,13 @@ function frames(
         spike = nS + (r * S)
         conv(n, spike, ckern, convolved, kdim) # the spiking neuron have a 1.3fold greater influence over its neighbors
         state = e * (nS + (k * S)) + (1 - e) * convolved # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
-        # state = e * (( r * nS) + (k * S)) + (1 - e) * convolved # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
+        #state = e * (( r * nS) + (k * S)) + (1 - e) * convolved # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
         push!(state_seq, deepcopy(state))
     end
     return state_seq, params
 end
 ##
-const n = 1000
+const n = 200
 ##
 conv = setup_convolution(n)
 ##
@@ -62,13 +62,15 @@ niter = 300
 # ckern = [1. 1 1; 1 0 1; 1 1 1] |> CuArray
 ##
 ckern_expr = :([b * a b b * a; b e * b b; b * a b b * a])
-ckern = cu(eval(ckern_expr))
-ckern ./= (sum(ckern) / ρ)
+ckern = eval(ckern_expr) ./= ρ
+ckern = cu(ckern)
 ##
 init_state = CUDA.rand(n, n)
 ##
-@elapsed flist, params = frames(init_state, niter; ckern=ckern, r=r)
-@elapsed host_outs = Array.(flist)
+flist, params = frames(init_state, niter; ckern=ckern, r=r)
+# %%
+
+host_outs = Array.(flist)
 ##
 opath = pwd() * "/CuArrays/outputs/conv_spiking/"
 mkpath(opath)
@@ -83,4 +85,20 @@ open(opath * filename * ".txt", "w") do io
     end
 end
 ##
-make_gif(host_outs, fps=8, path=opath, filename=filename)
+#make_gif(host_outs, fps=8, path=opath, filename=filename)
+
+# %%
+
+# %%
+field = Node(host_outs[1])
+# %%
+fig, hm = heatmap(field)
+# %%
+field
+# %%
+
+
+GLMakie.record(fig, "$(filename).mp4", 1:niter; framerate = 30) do i
+    field[] = host_outs[i][:,:]
+    sleep(1/30)
+end
