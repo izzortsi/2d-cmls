@@ -71,20 +71,10 @@ init_state = CUDA.rand(n, n)
 @elapsed flist, params = frames(init_state, niter; ckern=ckern, r=r)
 @elapsed host_outs = Array.(flist)
 ##
-#opath = pwd() * "/CuArrays/outputs/conv_spiking/"
-#mkpath(opath)
+
 push!(params, "a" => a)
 push!(params, "b" => b)
 push!(params, "kerpattern" => string(ckern_expr))
-##
-filename = replace("$(Dates.Time(Dates.now()))", ":" => "_") 
-open(opath * filename * ".txt", "w") do io  
-    for (key, val) in params
-        println(io, "$key: $val")
-    end
-end
-##
-#make_gif(host_outs, fps=8, path=opath, filename=filename)
 
 #%%
 field = Node(host_outs[1])
