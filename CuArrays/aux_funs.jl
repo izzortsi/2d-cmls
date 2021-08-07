@@ -1,7 +1,7 @@
 module Aux
-using Plots, LinearAlgebra, CUDA, Dates
+using Plots, LinearAlgebra, CUDA, Dates, GLMakie
 
-export make_gif, harr
+export make_gif, harr, makie_record
 
 function vn_neighborhood()
     return
@@ -59,4 +59,14 @@ end
 
 harr = ((x -> heatmap(x, clims=(0, 1))) ∘ Array)
 
+end
+
+"""
+function makie_record(fig, node, framelist, path, niter; fps=30)
+"""
+function makie_record(fig, node, framelist, path, niter; fps=30)
+    GLMakie.record(fig, path * ".mp4", 1:niter; framerate = fps) do i
+        node[] = framelist[i][:,:]
+        sleep(1/fps)
+    end
 end
