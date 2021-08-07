@@ -5,6 +5,7 @@ using Plots
 using Dates
 using Images, TestImages, Colors
 using OffsetArrays
+using GLMakie
 ##
 include("convolution.jl")
 using .Convolution
@@ -39,7 +40,7 @@ function frames(
     return state_seq, params
 end
 ##
-const n = 1000
+const n = 400
 ##
 conv = setup_convolution(n)
 ##
@@ -68,19 +69,12 @@ ckern ./= (sum(ckern) / ρ)
 init_state = CUDA.rand(n, n)
 ##
 @elapsed flist, params = frames(init_state, niter; ckern=ckern, r=r)
+#%%
 @elapsed host_outs = Array.(flist)
 ##
-opath = pwd() * "/CuArrays/outputs/conv_spiking/"
-mkpath(opath)
 push!(params, "a" => a)
 push!(params, "b" => b)
 push!(params, "kerpattern" => string(ckern_expr))
-##
-filename = replace("$(Dates.Time(Dates.now()))", ":" => "_") 
-open(opath * filename * ".txt", "w") do io  
-    for (key, val) in params
-        println(io, "$key: $val")
-    end
-end
-##
-make_gif(host_outs, fps=8, path=opath, filename=filename)
+field = Node(host_outs[1])
+fig, hm = GLMakie.heatmap(field)
+makie_record(fig, field, host_outs, params, niter, "spiking")

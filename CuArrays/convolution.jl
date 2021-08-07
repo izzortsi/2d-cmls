@@ -1,7 +1,7 @@
 module Convolution
 
 using CUDA
-export setup_convolution, loop_conv
+export setup_convolution, setup_extended_convolution, loop_conv
 
 function extended_convolution(n, A, ckern, kfuns, outs, kdim)
 
@@ -79,15 +79,16 @@ returns a function `conv(n, A, ckern, outs, kdim)`, that performs a convolution 
     `A` is a `n` by `n` `CuArray` and `outs` must be similar to `A`;\\
     `ckern` is a `kdim` by `kdim` `CuArray`;
 """
-function setup_convolution(n::Int64; is_extended = false)
+function setup_extended_convolution(n::Int64)
     numblocks, threads = setup_kernel(n)
-    if is_extended
-        econv(n, A, ckern, kfuns, outs, kdim) = @cuda blocks = (numblocks, numblocks) threads = (threads, threads) extended_convolution(n, A, ckern, kfuns, outs, kdim)
-        return econv
-    else
-        conv(n, A, ckern, outs, kdim) = @cuda blocks = (numblocks, numblocks) threads = (threads, threads) convolution(n, A, ckern, outs, kdim)
-        return conv
-    end
+    econv(n, A, ckern, kfuns, outs, kdim) = @cuda blocks = (numblocks, numblocks) threads = (threads, threads) extended_convolution(n, A, ckern, kfuns, outs, kdim)
+    econv
+end
+
+function setup_convolution(n::Int64)
+    numblocks, threads = setup_kernel(n)
+    conv(n, A, ckern, outs, kdim) = @cuda blocks = (numblocks, numblocks) threads = (threads, threads) convolution(n, A, ckern, outs, kdim)
+    conv
 end
 
 function loop_conv(niter, A, ckern, kdim)

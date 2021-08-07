@@ -92,3 +92,10 @@ function makie_record(fig, node, framelist, params, niter, chaotic_or_spiking; f
         sleep(1/fps)
     end
 end
+
+function no_offset(offset_array)
+    n, m = size(offset_array)
+    offset_array = OffsetArray(offset_array, 1:n, 1:m)
+    array = convert(Array, offset_array)
+    return array
+end

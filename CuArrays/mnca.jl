@@ -5,7 +5,17 @@ using Dates
 using Images, TestImages, Colors
 using OffsetArrays
 using GLMakie
+using ImageFiltering
+using LazyGrids
 ##
+
+mutable struct MNCA
+    space::Matrix
+    kernels::Array
+    transition_functions::Array
+    states::Array
+end
+
 
 include("convolution.jl")
 using .Convolution
@@ -15,15 +25,8 @@ using .Aux
 ##
 CUDA.allowscalar(false)
 ##
-function frames(
-    state, niter; 
-    ckern=cu([1. 1 1; 1 0 1; 1 1 1]), 
-    bin=0.93, 
-    e=0.66, 
-    r=1.3, 
-    k=0.0
-        )
-    params = Dict{String,Any}(["bin" => bin, "e" => e, "r" => r, "k" => k])
+function frames(configuration, niter, kernels, functions, states; params)
+    #params = Dict{String,Any}(["bin" => bin, "e" => e, "r" => r, "k" => k])
     kdim, = size(ckern)
     state_seq = [state]
     for i = 1:niter
@@ -40,35 +43,72 @@ function frames(
     return state_seq, params
 end
 ##
-const n = 200
+const n = 256
 ##
-conv = setup_convolution(n)
+setup_convolution(n)
 ##
-bin = 0.93
-e = 0.66
-r = 1.1
-k = 0.0
-
-b = 1.01
-a = 0.909
-ρ = 1.5
-
 niter = 300
 ##
+Z2_region = [[x, y] for x in -128:1:127, y in 128:-1:-127]
+#%%
+transpose(Z2_region)
+
+#%%
+distances_field = norm.(Z2_region)
 
 ##
-# alternative kernel patterns
-# ckern = [b*a b b*a; b 0 b; b*a b b*a] |> CuArray
-# ckern = [b*a b b*a; b e*b b; b*a b b*a] |> CuArray
-# ckern = [1. 1 1; 1 0 1; 1 1 1] |> CuArray
-##
-ckern_expr = :([b * a b b * a; b e * b b; b * a b b * a])
-ckern = cu(eval(ckern_expr))
-ckern ./= (sum(ckern) / ρ)
-##
+heatmap(distances_field)
+#%%
+F(X) = sin(X[1])^3 + cos(X[2] + π/2)
+
+f(x) = sin(x)^3 + cos(x + π/2)
+#%%
+trig_field = F.(Z2_region)
+#%%
+trig_field = f.(distances_field)
+
+#%%
+gaussian_kernel = Kernel.gaussian(3)
+#%%
+
+
+#%%
+gkernel = no_offset(gaussian_kernel)
+
+#%%
+#heatmap(gkernel)
+
+
+#%%
+#heatmap(trig_field)
+#%%
+kdim, = size(gkernel)
+convolved = CUDA.zeros(n, n)
+#%%
+device_field = cu(trig_field)
+device_kernel = cu(gkernel)
+
+#%%
+
+
+
+conv_field_gkern = conv(n, device_field, device_kernel, convolved, kdim)
+#%%
+conv(n, device_field, device_kernel, convolved, kdim)
+#%%
+host_conv = conv_field_gkern |> Array
+
+
+#%%
+conv
+#%%
+
+
+
 init_state = CUDA.rand(n, n)
 ##
 @elapsed flist, params = frames(init_state, niter; ckern=ckern, r=r)
+#%%
 @elapsed host_outs = Array.(flist)
 ##
 
