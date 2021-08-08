@@ -1,7 +1,6 @@
 ##
 using CUDA
 using LinearAlgebra
-using Plots
 using Dates
 using Images, TestImages, Colors
 using OffsetArrays
@@ -31,27 +30,36 @@ function frames(
         convolved = CUDA.zeros(n, n)
         S = (state .>= bin) .* state # the spiking neurons
         nS = (state .< bin) .* state # the complimentary matrix
-        spike = nS + (r * S)
+        spike = nS .+ (r .* S)
         conv(n, spike, ckern, convolved, kdim) # the spiking neuron have a 1.3fold greater influence over its neighbors
-        state = e * (nS + (k * S)) + (1 - e) * convolved # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
+        state = e .* (nS .+ (k .* S)) .+ (1 - e) .* convolved/9 # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
+        #e*(nS + k*S) + (1-e)*conv
         # state = e * (( r * nS) + (k * S)) + (1 - e) * convolved # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
-        push!(state_seq, deepcopy(state))
+        push!(state_seq, state)
     end
     return state_seq, params
 end
 ##
-const n = 400
+const n = 250
 ##
 conv = setup_convolution(n)
 ##
-bin = 0.93
-e = 0.66
-r = 1.1
-k = 0.0
+# bin = 0.93
+# e = 0.66
+# r = 1.1
+# k = 0.0
 
-b = 1.01
-a = 0.909
-ρ = 1.5
+# b = 1.01
+# a = 0.909
+# ρ = 1.5
+
+bin=0.93
+e=0.66
+b=1.01
+
+r=1.3
+k=0.0
+a=0.909
 
 niter = 300
 ##
@@ -64,7 +72,7 @@ niter = 300
 ##
 ckern_expr = :([b * a b b * a; b e * b b; b * a b b * a])
 ckern = cu(eval(ckern_expr))
-ckern ./= (sum(ckern) / ρ)
+#ckern ./= (sum(ckern) / ρ)
 ##
 init_state = CUDA.rand(n, n)
 ##

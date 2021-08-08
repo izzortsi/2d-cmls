@@ -1,12 +1,11 @@
 using ArrayFire
 using LinearAlgebra
-using AbstractPlotting
 using GLMakie
 using Images, TestImages, Colors
 using ColorSchemes
 using Dates
-using OffsetArrays
-
+using OffsetArrays 
+#%%
 function make_initial_config(;initialization="rand")
     if initialization=="rand"
         return rand(dim, dim) |> AFArray
