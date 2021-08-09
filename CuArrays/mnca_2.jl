@@ -63,6 +63,8 @@ mutable struct MNCA
     calc_kernels::Function
     δ::Function
     Φ::Vector{Function}
+    update!::Function
+    populate!::Function
 
     U::Matrix{Float64}
     G::Matrix{Float64}
@@ -96,6 +98,9 @@ end
 
 
 A = zeros(SIZE, SIZE)
+#%%
+
+
 M = MNCA(A, R, m, s, b, 1/5)
 
 #%%
@@ -110,10 +115,17 @@ function update2(M::MNCA)
     M.A[:, :] = clamp.(M.A + M.dt^2 * M.G, 0, 1)[:, :]
 end
 
+function update!(M::MNCA)
+    for ϕ in M.Φ
+        ϕ(M)
+    end
+end
+
 #%%
 M.Φ = Vector{Function}(undef, 0)
 push!(M.Φ, update1)
 push!(M.Φ, update2)
+M.update! = update!
 #%%
 function populate(W, creature_cells, num_creatures)
     cx, cy = size(creature_cells)
@@ -128,6 +140,9 @@ end
 M.A = A
 populate(M.A, orbium["cells"], 30)
 #%%
+M.populate! = () -> populate(M.A, orbium["cells"], 1)
+#%%
+
 
 function panels(M::MNCA)
 
@@ -160,32 +175,6 @@ fig, nA, nU, nG, nU2 = panels(M)
 fig
 #%%
 
-
-# function run(M::MNCA)
-
-#     #fig, nA, nU, nG = panels(A, M)
-
-#     fps = 60
-#     nframes = 360
-
-#     for i = 1:nframes
-#         if i%2 != 0
-#             M.Φ[1](M)
-#             M.Φ[2](M)
-#             nA[] = M.A
-#             nU[] = M.U
-#             nG[] = M.G
-#             sleep(1/fps) # refreshes the display!
-#         else
-#             M.Φ[2](M)
-#             M.Φ[1](M)
-#             nA[] = M.A
-#             nU[] = M.U
-#             nG[] = M.G
-#             sleep(1/fps) # refreshes the display!
-#         end
-#     end
-# end
 function run(M::MNCA)
 
     #fig, nA, nU, nG = panels(A, M)
@@ -203,7 +192,7 @@ function run(M::MNCA)
     end
 end
 #%%
-run(M)
+#run(M)
 #%%
 
 function record_run(fig, M; nframes = 600, fps=36)
@@ -221,5 +210,13 @@ end
 
 #%%
 
-record_run(fig, M)
+#record_run(fig, M)
 
+#%%
+
+include("sim_manager_min.jl")
+
+
+#%%
+
+simulate(M, fps=30)
