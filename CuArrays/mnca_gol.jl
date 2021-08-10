@@ -169,7 +169,7 @@ creature["cells"] = cu(creature["cells"])
 
 populate(M.A, creature["cells"], 100)
 #%%
-M.populate! = () -> populate(M.A, creature["cells"], 15)
+M.populate! = () -> populate(M.A, creature["cells"], 50)
 #%%
 
 

@@ -18,7 +18,7 @@ function simulate(M; resolution=(1280, 720), fps = 24)
 
     dnU = Node(M.U)
     hnU = lift(Array, dnU)
-    ax2, hm2 = heatmap(fig[1, 2], hnU, colorrange=(0, 1))
+    ax2, hm2 = heatmap(fig[1, 2], hnU)#, colorrange=(0, 1))
     hidedecorations!(ax2)
 
     dnG = Node(M.G)
