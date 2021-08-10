@@ -41,12 +41,15 @@ function frames(
     return state_seq
 end
 ##
-const n = 256
+pad = 1
+# %%
+
+const n = 256 + 2*pad
 ##
-conv = Convolution.setup_convolution(n)
+conv = Convolution.setup_padded_convolution(n)
 
 #%%
-
+conv
 #%%
 
 
@@ -73,10 +76,23 @@ ckern = eval(ckern_expr) |> cu
 #%%
 #ckern ./= (sum(ckern) / ρ)
 ##
+kdim, = size(ckern)
+# %%
+pad = kdim ÷ 2
+# %%
+
+init_state = zeros(n, n)
+
+# %%
+A = rand(n-2*pad, n-2*pad)
+init_state[1+pad:n-pad, 1+pad:n-pad] = A
+
+# %%
+init_state
 
 # %%
 
-init_state = CUDA.rand(n, n)
+init_state = cu(init_state)
 
 #%%
 
