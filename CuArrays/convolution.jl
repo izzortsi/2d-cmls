@@ -33,14 +33,15 @@ function extended_convolution(n, A, ckern, kfuns, outs, kdim)
 end
 
 
-function convolution(n, A, ckern, outs, kdim)
+function convolution(A, ckern, outs)
 
     indx = (blockIdx().x - 1) * blockDim().x + threadIdx().x
     stridex = blockDim().x * gridDim().x
 
     indy = (blockIdx().y - 1) * blockDim().y + threadIdx().y
     stridey = blockDim().y * gridDim().y
-
+    n, = CUDA.size(A)
+    kdim, = CUDA.size(ckern)
     for i in indx:stridex:n, j in indy:stridey:n
         ran = kdim ÷ 2
         # indices for the neighbors
@@ -87,7 +88,7 @@ end
 
 function setup_convolution(n::Int64)
     numblocks, threads = setup_kernel(n)
-    conv(n, A, ckern, outs, kdim) = @cuda blocks = (numblocks, numblocks) threads = (threads, threads) convolution(n, A, ckern, outs, kdim)
+    conv(A, ckern, outs) = @cuda blocks = (numblocks, numblocks) threads = (threads, threads) convolution(A, ckern, outs)
     conv
 end
 
