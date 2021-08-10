@@ -28,23 +28,23 @@ function simulate(M; resolution=(1280, 720), fps = 24)
 
 
     nA = Node(M.A)
-    ax1, hm1 = heatmap(fig[1, 1], nA)
+    ax1, hm1 = heatmap(fig[1, 1], nA, colorrange=(0, 1))
     hidedecorations!(ax1)
 
     nU = Node(M.U)
-    ax2, hm2 = heatmap(fig[1, 2], nU)
+    ax2, hm2 = heatmap(fig[1, 2], nU, colorrange=(0, 1))
     hidedecorations!(ax2)
 
     nG = Node(M.G)
-    ax3, hm3 = heatmap(fig[2, 1], nG)
+    ax3, hm3 = heatmap(fig[2, 1], nG, colorrange=(0, 1))
     hidedecorations!(ax3)
 
     dims, = size(M.K[1])
     mid = dims ÷ 2
     r = M.R
 
-    heatmap(fig[2,2][1,1], M.K[1][mid-r:mid+r+2, mid-r:mid+r+2])
-    heatmap(fig[2,2][1,2], M.K[2][mid-r:mid+r+2, mid-r:mid+r+2])
+    heatmap(fig[2,2][1,1], M.K[1][mid-r:mid+r+2, mid-r:mid+r+2], colorrange=(0, 1))
+    heatmap(fig[2,2][1,2], M.K[2][mid-r:mid+r+2, mid-r:mid+r+2], colorrange=(0, 1))
 
     stream = VideoStream(fig.scene, framerate=fps)
     #fig
