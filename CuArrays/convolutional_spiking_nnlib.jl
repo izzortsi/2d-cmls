@@ -91,8 +91,6 @@ init_state = CUDA.rand(n, n, 1, 1)
 
 
 @elapsed host_outs = Array.(flist)
-##
-host_outs
 #%%
 host_outs[1][:,:]
 #%%
@@ -114,3 +112,5 @@ fig
 #%%
 
 makie_record(fig, field, h_outs, params, niter, "spiking")
+
+
