@@ -30,7 +30,7 @@ function frames(
         nS = (state .< bin) .* state # the complimentary matrix
         spike = nS .+ (r .* S)
         #println(typeof(spike))
-        conv(n, spike, ckern, convolved, kdim) 
+        conv(spike, ckern, convolved) 
         convolved = convolved ./ Float32(8)
         #conv(n, spike, ckern, convolved, kdim) # the spiking neuron have a 1.3fold greater influence over its neighbors
         state = e .* (nS .+ (k .* S)) .+ (Float32(1) - e) .* convolved  # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
