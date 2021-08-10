@@ -77,20 +77,20 @@ mutable struct MNCA
         function calc_kernel(M::MNCA)
             M.S = D(X, Y, R)
             M.K = Vector{DHMatrix}(undef, 0)
-            K1 = [1. 1. 1.; 1. 1. 1.; 1. 1. 1.]
-            #K1 = [1. 1. 1.; 1. 1. 1.; 1. 1. 1.]
-            push!(M.K, K1 |> cu)
+
+            K1= cu([1. 1. 1.; 1. 0 1.; 1. 1. 1.])
+            push!(M.K, K1)
             K2 = copy(K1)
             push!(M.K, K2)
         end
 
-        δ(U) = growth(U, μ, σ)
-
         M = new(A, R, μ, σ, β, dt);
         calc_kernel(M)
 
+        M.U = CUDA.similar(A)
+        M.G = CUDA.similar(A)
+        M.δ = x -> x/9   
         M.calc_kernels = calc_kernel
-        M.δ = δ
 
         return M
     end
@@ -105,9 +105,7 @@ A = zeros(SIZE, SIZE) |> cu
 M = MNCA(A, 1, m, s, b, 1/5)
 
 #%%
-M.U = CUDA.similar(A)
-M.G = CUDA.similar(A)
-M.δ = x -> x/9
+
 
 #%%
 
@@ -129,7 +127,7 @@ M.A[10:14, 10:14] = creature["cells"]
 # %%
 M.A
 # %%
-M.K[1] = cu([1. 1. 1.; 1. 0 1.; 1. 1. 1.])
+
 # %%
 
 
@@ -167,11 +165,11 @@ function populate(W, creature_cells, num_creatures)
 end
 # %%
 creature["cells"] = cu(creature["cells"])
+# %%
+
+populate(M.A, creature["cells"], 100)
 #%%
-M.A = A
-populate(M.A, creature["cells"], 30)
-#%%
-M.populate! = () -> populate(M.A, creature["cells"], 1)
+M.populate! = () -> populate(M.A, creature["cells"], 15)
 #%%
 
 
@@ -229,7 +227,7 @@ run(M)
 function record_run(fig, M; nframes = 600, fps=36)
     opath = pwd() * "/CuArrays/outputs/" * "lenia/"
     mkpath(opath)
-    GLMakie.record(fig, opath * "mnorbia.mp4", 1:nframes; framerate = fps) do i
+    GLMakie.record(fig, opath * "mnca_gol.mp4", 1:nframes; framerate = fps) do i
         M.Φ[1](M)
         M.Φ[2](M)
         nA[] = M.A
@@ -240,12 +238,11 @@ function record_run(fig, M; nframes = 600, fps=36)
 end
 
 #%%
-
+a = cu(bitrand(10, 10)*1)
 #record_run(fig, M)
 
 #%%
-
-include("sim_manager_min.jl")
+include("sim_man_gol.jl")
 
 
 #%%
