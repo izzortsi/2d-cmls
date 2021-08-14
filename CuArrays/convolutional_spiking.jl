@@ -1,15 +1,14 @@
 ##
 using CUDA
-using LinearAlgebra
+#using LinearAlgebra
 using Dates
-using Images, TestImages, Colors
-using OffsetArrays
+#using Images, TestImages, Colors
+#using OffsetArrays
 using GLMakie
 ##
 include("convolution.jl")
-using .Convolution
-##
 include("aux_funs.jl")
+using .Convolution
 using .Aux
 ##
 CUDA.allowscalar(false)
@@ -17,41 +16,40 @@ CUDA.allowscalar(false)
 function frames(
     state, niter; 
     ckern=cu([1. 1 1; 1 0 1; 1 1 1]), 
-    bin=0.93, 
-    e=0.66, 
-    r=1.3, 
-    k=0.0
+    bin=Float32(0.93), 
+    e=Float32(0.66), 
+    r=Float32(1.3), 
+    k=Float32(0.0)
         )
-    params = Dict{String,Any}(["bin" => bin, "e" => e, "r" => r, "k" => k])
-    kdim, = size(ckern)
     state_seq = [state]
+    convolved = CUDA.similar(state)
+
     for i = 1:niter
         state = state_seq[end]
-        convolved = CUDA.zeros(n, n)
         S = (state .>= bin) .* state # the spiking neurons
         nS = (state .< bin) .* state # the complimentary matrix
         spike = nS .+ (r .* S)
-        conv(n, spike, ckern, convolved, kdim) # the spiking neuron have a 1.3fold greater influence over its neighbors
-        state = e .* (nS .+ (k .* S)) .+ (1 - e) .* convolved/9 # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
+        #println(typeof(spike))
+        conv(spike, ckern, convolved) 
+        convolved = convolved ./ Float32(8)
+        #conv(n, spike, ckern, convolved, kdim) # the spiking neuron have a 1.3fold greater influence over its neighbors
+        state = e .* (nS .+ (k .* S)) .+ (Float32(1) - e) .* convolved  # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
         #e*(nS + k*S) + (1-e)*conv
         # state = e * (( r * nS) + (k * S)) + (1 - e) * convolved # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
-        push!(state_seq, state)
+        push!(state_seq, deepcopy(state))
     end
-    return state_seq, params
+    return state_seq
 end
 ##
-const n = 250
+const n = 256
 ##
-conv = setup_convolution(n)
-##
-# bin = 0.93
-# e = 0.66
-# r = 1.1
-# k = 0.0
+conv = Convolution.setup_convolution(n)
 
-# b = 1.01
-# a = 0.909
-# ρ = 1.5
+#%%
+
+#%%
+
+
 
 bin=0.93
 e=0.66
@@ -61,28 +59,57 @@ r=1.3
 k=0.0
 a=0.909
 
-niter = 300
+niter = 700
 ##
 
 ##
-# alternative kernel patterns
-# ckern = [b*a b b*a; b 0 b; b*a b b*a] |> CuArray
-# ckern = [b*a b b*a; b e*b b; b*a b b*a] |> CuArray
-# ckern = [1. 1 1; 1 0 1; 1 1 1] |> CuArray
-##
+
 ckern_expr = :([b * a b b * a; b e * b b; b * a b b * a])
-ckern = cu(eval(ckern_expr))
+ckern = eval(ckern_expr) |> cu
+
+
+#%%
+#ckern = cu(reshape(ckern[:], (3, 3, 1, 1)))
+#%%
 #ckern ./= (sum(ckern) / ρ)
 ##
+
+# %%
+
 init_state = CUDA.rand(n, n)
-##
-@elapsed flist, params = frames(init_state, niter; ckern=ckern, r=r)
+
 #%%
+
+
+
+
+@elapsed flist = frames(init_state, niter, ckern=ckern)
+#%%
+#flist
+#%%
+
+
 @elapsed host_outs = Array.(flist)
-##
+#%%
+host_outs[10]
+#%%
+
+#%%
+
+
+params = Dict()
 push!(params, "a" => a)
 push!(params, "b" => b)
 push!(params, "kerpattern" => string(ckern_expr))
+#%%
+
+
 field = Node(host_outs[1])
-fig, hm = GLMakie.heatmap(field)
+fig, hm = GLMakie.heatmap(field, colorrange=(0,1))
+#%%
+fig
+#%%
+
 makie_record(fig, field, host_outs, params, niter, "spiking")
+
+
