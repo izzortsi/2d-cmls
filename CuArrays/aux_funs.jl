@@ -62,32 +62,29 @@ harr = ((x -> heatmap(x, clims=(0, 1))) ∘ Array)
 end
 
 
-function set_path_and_params(params, chaotic_or_spiking)
-    if chaotic_or_spiking == "spiking"
-        endpoint_dir = "conv_spiking/"
-    elseif chaotic_or_spiking == "chaotic"
-        endpoint_dir = "chaotic/"
-    end
-    opath = pwd() * "/CuArrays/outputs/" * endpoint_dir
-    mkpath(opath)
+function set_path_and_params(params, outputs_folder)
+    
+    opath = joinpath(@__DIR__, mkpath(outputs_folder))
+    #mkpath(opath)
     ##
-    filename = replace("$(Dates.Time(Dates.now()))", ":" => "_") 
-    open(opath * filename * ".txt", "w") do io  
+    filename = replace("$(Dates.Time(Dates.now()))", ":" => "_")
+    filepath = joinpath(opath, filename)
+    open(filepath * ".txt", "w") do io  
         for (key, val) in params
             println(io, "$key: $val")
         end
     end
-    return opath*filename
+    return filepath
 end
 
 """
-function makie_record(fig, node, framelist, params, niter, chaotic_or_spiking; fps=30)
+function makie_record(fig, node, framelist, params, niter, outputs_folder; fps=30)
 """
-function makie_record(fig, node, framelist, params, niter, chaotic_or_spiking; fps=30)
+function makie_record(fig, node, framelist, params, niter, outputs_folder; fps=30)
 
-    path = set_path_and_params(params, chaotic_or_spiking)
+    filepath = set_path_and_params(params, outputs_folder)
 
-    GLMakie.record(fig, path * ".mp4", 1:niter; framerate = fps) do i
+    GLMakie.record(fig, filepath * ".mp4", 1:niter; framerate = fps) do i
         node[] = framelist[i][:,:]
         sleep(1/fps)
     end

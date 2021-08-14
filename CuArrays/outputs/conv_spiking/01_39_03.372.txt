@@ -1,3 +1,0 @@
-b: 1.01
-a: 0.909
-kerpattern: [b * a b b * a; b e * b b; b * a b b * a]

@@ -1,0 +1,2 @@
+implementar a determinação interativa do estado inicial. clicando. isso vai possivelmente servir pros meus outros programas de CML, CA etc
+possivelmente, depois, fazer o CA ser interativo durante as iterações, também
