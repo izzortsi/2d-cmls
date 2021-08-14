@@ -5,4 +5,8 @@ repository for archiving experiments with various of families of "spatially" two
 ![cml-spiking-sites1](https://github.com/izzortsi/2d-cmls/blob/9c0e8d12ec94487e14899d6fce494b0186b27341/ArrayFire/Convolutional%20Spiking%20Model/spiking_model_random_iconfig.gif "A CML with spiking sites")
 
 ##### Abelian sandpiles breaking symmetries are kinda cool:
-https://github.com/izzortsi/2d-dynamics/blob/8d56444f0c8f8e7a1f43f12eebe0f779ab588a18/models/abelian-sandpiles/outputs/smallout.mp4
+
+
+
+https://user-images.githubusercontent.com/35747979/129433120-c54462a4-781a-4724-9169-eb88e1931418.mp4
+
