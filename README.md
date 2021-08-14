@@ -1,4 +1,4 @@
-# 2d-cmls
+# 2d-dynamics
 repository for archiving experiments with various of families of "spatially" two-dimensional dynamical systems.
 ##### A CML with spiking sites and uniformly distributed random initial states:
 
