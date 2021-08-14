@@ -1,7 +1,7 @@
 module Aux
-using Plots, LinearAlgebra, CUDA, Dates
+using Plots, LinearAlgebra, CUDA, Dates, GLMakie
 
-export make_gif, harr
+export make_gif, harr, makie_record
 
 function vn_neighborhood()
     return
@@ -59,4 +59,40 @@ end
 
 harr = ((x -> heatmap(x, clims=(0, 1))) ∘ Array)
 
+end
+
+
+function set_path_and_params(params, outputs_folder)
+    
+    opath = joinpath(@__DIR__, mkpath(outputs_folder))
+    #mkpath(opath)
+    ##
+    filename = replace("$(Dates.Time(Dates.now()))", ":" => "_")
+    filepath = joinpath(opath, filename)
+    open(filepath * ".txt", "w") do io  
+        for (key, val) in params
+            println(io, "$key: $val")
+        end
+    end
+    return filepath
+end
+
+"""
+function makie_record(fig, node, framelist, params, niter, outputs_folder; fps=30)
+"""
+function makie_record(fig, node, framelist, params, niter, outputs_folder; fps=30)
+
+    filepath = set_path_and_params(params, outputs_folder)
+
+    GLMakie.record(fig, filepath * ".mp4", 1:niter; framerate = fps) do i
+        node[] = framelist[i][:,:]
+        sleep(1/fps)
+    end
+end
+
+function no_offset(offset_array)
+    n, m = size(offset_array)
+    offset_array = OffsetArray(offset_array, 1:n, 1:m)
+    array = convert(Array, offset_array)
+    return array
 end
