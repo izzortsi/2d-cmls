@@ -214,7 +214,7 @@ end
 
 #%%
 
-include("sim_manager_min.jl")
+include("simulation_manager.jl")
 
 
 #%%

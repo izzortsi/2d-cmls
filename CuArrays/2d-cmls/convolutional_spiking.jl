@@ -1,4 +1,5 @@
-##
+# %%
+
 using CUDA
 #using LinearAlgebra
 using Dates
@@ -16,7 +17,7 @@ CUDA.allowscalar(false)
 function frames(
     state, niter; 
     ckern=cu([1. 1 1; 1 0 1; 1 1 1]), 
-    bin=Float32(0.93), 
+    bin=Float32(0.93),  
     e=Float32(0.66), 
     r=Float32(1.3), 
     k=Float32(0.0)
@@ -41,7 +42,7 @@ function frames(
     return state_seq
 end
 ##
-const n = 256
+const n = 1024
 const output_folder =  "conv_spiking"
 
 ##

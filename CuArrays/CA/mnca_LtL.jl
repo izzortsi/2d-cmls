@@ -58,6 +58,11 @@ mutable struct MNCA
     β::Array{Float64}
     dt::Float64
     
+    bin::Float64
+    r::Float64
+    k::Float64
+    e::Float64
+
     S::Matrix{Float64}
     K::Vector{DHMatrix}
     K_fft::Vector{Matrix{ComplexF64}}
@@ -71,7 +76,7 @@ mutable struct MNCA
     U::DHMatrix
     G::DHMatrix
 
-    function MNCA(A, R, μ, σ, β, dt)
+    function MNCA(A, R, μ, σ, β, dt, bin, r, k, e)
 
         function calc_kernel(M::MNCA)
             M.S = D(X, Y, R)
@@ -103,7 +108,7 @@ mutable struct MNCA
             push!(M.K, K2)
         end
 
-        M = new(A, R, μ, σ, β, dt);
+        M = new(A, R, μ, σ, β, dt, bin, r, k, e);
         calc_kernel(M)
 
         M.U = CUDA.similar(A)
@@ -134,8 +139,13 @@ heatmap(K2)
 
 #%%
 A = zeros(SIZE, SIZE) |> cu
+
+bin=Float32(0.93) 
+e=Float32(0.05) 
+r=Float32(0.1) 
+k=Float32(0.7)
 #A = cu(bitrand(SIZE, SIZE)) * Float32(1.0)
-M = MNCA(A, 1, m, s, b, 1/5)
+M = MNCA(A, 1, m, s, b, 1/5, bin, r, k, e)
 
 #%%
 
@@ -166,6 +176,43 @@ function update2(M::MNCA)
     M.A .= clamp.(M.A + aux_update(M.U) .÷1, 0, 1)
 end
 
+function continuous_update(M::MNCA)
+    conv(M.A, M.K[1], M.U)
+    M.G .= (M.δ[1].(M.U) .* M.A)
+    function aux_update(U)
+        u1 = (U .<= 33) * M.r 
+        u2 = (34 .<= U .<= 45) * M.k
+        u3 = (46 .<= U .<= 57) .* M.A
+        u4 = (U .>= 58) * M.e
+        return u1 + u2 + u3 + u4
+    end
+    M.A .= clamp.(aux_update(M.U), 0, 1)
+end
+
+function spiking_update(M::MNCA)
+    conv(M.A, M.K[1], M.U)
+    M.G .= (M.δ[1].(M.U) .* M.A)
+    function aux_update(U)
+        u1 = (U .<= 33) * 0.1 
+        u2 = (34 .<= U .<= 45) * 0.8
+        u3 = (46 .<= U .<= 57) .* M.A
+        u4 = (U .>= 58) * 0.1
+        return u1 + u2 + u3 + u4
+    end
+
+    state = aux_update(M.U)
+    S = (state .>= M.bin) .* state # the spiking neurons
+    nS = (state .< M.bin) .* state # the complimentary matrix
+    spike = nS .+ (M.r .* S)
+    #println(typeof(spike))
+    conv(spike, M.K[1], M.U) 
+    M.U = M.U ./ Float32(9)
+    #conv(n, spike, ckern, convolved, kdim) # the spiking neuron have a 1.3fold greater influence over its neighbors
+    M.A = M.e .* (nS .+ (M.k .* S)) .+ (Float32(1) - M.e) .* M.U  # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
+    #e*(nS + k*S) + (1-e)*conv
+
+end
+
 function update!(M::MNCA)
     for ϕ in M.Φ
         ϕ(M)
@@ -176,8 +223,8 @@ end
 M.Φ = Vector{Function}(undef, 0)
 #%%
 
-
-push!(M.Φ, update1)
+push!(M.Φ, continuous_update)
+# push!(M.Φ, update1)
 #%%
 
 
@@ -236,19 +283,18 @@ end
 fig, dnA, hnA, dnU, hnU, dnG, hnG = panels(M)
 
 #%%
-fig#
+# fig#
 #%%
 M.update!(M)
 
 #%%
-include("sim_man_gol.jl")
+include("sim_man_gol_mutation.jl")
 
 
 #%%
 
 simulate(M, fps=30)
 #%%
-
 
 
 

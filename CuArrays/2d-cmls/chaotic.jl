@@ -5,6 +5,8 @@ using Plots
 using Dates
 using Images, TestImages, Colors
 using OffsetArrays
+using FileIO
+using GLMakie
 ##
 # include("convolution.jl")
 # using .Convolution
@@ -55,6 +57,22 @@ r = 1.3
 niter = 200
 ##
 istate = init_state()
+
+# %%
+img = load("C:\\Users\\igor-\\.cloned\\2d-dynamics\\CuArrays\\2d-cmls\\Dead_Rasputin.jpg")
+typeof(img)
+img_array = Gray.(img) .|> Base.Float32
+# %%
+GLMakie.heatmap(img_array)
+# %%
+
+# %%
+
+typeof(img_array .|> Base.Float32)
+
+f = Figure()
+# %%
+istate = cu(img_array)
 flist, params = frames(istate, niter)
 host_outs = Array.(flist)
 ##
@@ -74,3 +92,4 @@ make_gif(
     path = opath,
     filename = filename,
 )
+# %%

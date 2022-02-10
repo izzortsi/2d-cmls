@@ -5,6 +5,7 @@ using Dates
 #using Images, TestImages, Colors
 #using OffsetArrays
 using GLMakie
+
 ##
 include("convolution.jl")
 include("aux_funs.jl")
@@ -31,7 +32,7 @@ function frames(
         spike = nS .+ (r .* S)
         #println(typeof(spike))
         conv(spike, ckern, convolved) 
-        convolved = convolved ./ Float32(8)
+        convolved = convolved ./ Float32(9)
         #conv(n, spike, ckern, convolved, kdim) # the spiking neuron have a 1.3fold greater influence over its neighbors
         state = e .* (nS .+ (k .* S)) .+ (Float32(1) - e) .* convolved  # (nS + k*S) is the initial state but with the spiking neurons' states updated; (1-e)*conv is the influence the neighbors had over the neuron
         #e*(nS + k*S) + (1-e)*conv
@@ -126,6 +127,17 @@ fig, hm = GLMakie.heatmap(field, colorrange=(0,1))
 fig
 #%%
 
+
+
+
+function makie_record(fig, node, framelist, params, niter, outputs_folder; fps=30)
+
+    # filepath = set_path_and_params(params, outputs_folder)
+
+    GLMakie.record(fig, "video" * ".mp4", 1:niter; framerate = fps) do i
+        node[] = framelist[i][:,:]
+        sleep(1/fps)
+    end
+end
+
 makie_record(fig, field, host_outs, params, niter, "spiking")
-
-
