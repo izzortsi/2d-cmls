@@ -63,6 +63,8 @@ mutable struct MNCA
     k::Float64
     e::Float64
 
+    update_thresholds::Dict{String, Float64}
+
     S::Matrix{Float64}
     K::Vector{DHMatrix}
     K_fft::Vector{Matrix{ComplexF64}}
@@ -76,7 +78,7 @@ mutable struct MNCA
     U::DHMatrix
     G::DHMatrix
 
-    function MNCA(A, R, μ, σ, β, dt, bin, r, k, e)
+    function MNCA(A, R, μ, σ, β, dt, bin, r, k, e, update_thresholds)
 
         function calc_kernel(M::MNCA)
             M.S = D(X, Y, R)
@@ -108,7 +110,7 @@ mutable struct MNCA
             push!(M.K, K2)
         end
 
-        M = new(A, R, μ, σ, β, dt, bin, r, k, e);
+        M = new(A, R, μ, σ, β, dt, bin, r, k, e, update_thresholds);
         calc_kernel(M)
 
         M.U = CUDA.similar(A)
@@ -122,34 +124,49 @@ mutable struct MNCA
     end
 end
 #%%
-K2 = [0. 0. 1. 1. 1. 1. 1. 1. 1. 0. 0.;
-0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0.;
-1. 0. 0. 1. 1. 1. 1. 1. 0. 0. 1.;
-1. 0. 1. 1. 0. 0. 0. 1. 1. 0. 1.;
-1. 0. 1. 0. 1. 1. 1. 0. 1. 0. 1.;
-1. 0. 1. 0. 1. 0. 1. 0. 1. 0. 1.;
-1. 0. 1. 0. 1. 1. 1. 0. 1. 0. 1.;
-1. 0. 1. 1. 0. 0. 0. 1. 1. 0. 1.;
-1. 0. 0. 1. 1. 1. 1. 1. 0. 0. 1.;
-0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0.;
-0. 0. 1. 1. 1. 1. 1. 1. 1. 0. 0.;]
+# K2 = [0. 0. 1. 1. 1. 1. 1. 1. 1. 0. 0.;
+# 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0.;
+# 1. 0. 0. 1. 1. 1. 1. 1. 0. 0. 1.;
+# 1. 0. 1. 1. 0. 0. 0. 1. 1. 0. 1.;
+# 1. 0. 1. 0. 1. 1. 1. 0. 1. 0. 1.;
+# 1. 0. 1. 0. 1. 0. 1. 0. 1. 0. 1.;
+# 1. 0. 1. 0. 1. 1. 1. 0. 1. 0. 1.;
+# 1. 0. 1. 1. 0. 0. 0. 1. 1. 0. 1.;
+# 1. 0. 0. 1. 1. 1. 1. 1. 0. 0. 1.;
+# 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0.;
+# 0. 0. 1. 1. 1. 1. 1. 1. 1. 0. 0.;]
 #%%
-heatmap(K2)
+# heatmap(K2)
 
 
 #%%
 A = zeros(SIZE, SIZE) |> cu
 
 bin=Float32(0.93) 
-e=Float32(0.05) 
-r=Float32(0.1) 
-k=Float32(0.7)
+r=Float32(0.0) 
+k=Float32(0.893)
+e=Float32(0.1752)
+update_thresholds = Dict{String, Float32}(["1"=>33.0, "2"=> 45.0, "3"=> 57.0]) 
 #A = cu(bitrand(SIZE, SIZE)) * Float32(1.0)
-M = MNCA(A, 1, m, s, b, 1/5, bin, r, k, e)
+M = MNCA(A, 1, m, s, b, 1/5, bin, r, k, e, update_thresholds)
 
 #%%
 
 #%%
+
+function continuous_update(M::MNCA)
+    conv(M.A, M.K[1], M.U)
+    M.G .= (M.δ[1].(M.U) .* M.A)
+    function aux_update(U)
+        u1 = (U .<= M.update_thresholds[1]) * M.r 
+        u2 = (M.update_thresholds[1] .< U .<= M.update_thresholds[2]) * M.k
+        u3 = (M.update_thresholds[2] .< U .<= M.update_thresholds[3]) .* M.A
+        u4 = (U .> M.update_thresholds[3]) * M.e
+        return u1 + u2 + u3 + u4
+    end
+    M.A .= clamp.(aux_update(M.U), 0, 1)
+end
+# %%
 
 function update1(M::MNCA)
     conv(M.A, M.K[1], M.U)
@@ -181,9 +198,9 @@ function continuous_update(M::MNCA)
     M.G .= (M.δ[1].(M.U) .* M.A)
     function aux_update(U)
         u1 = (U .<= 33) * M.r 
-        u2 = (34 .<= U .<= 45) * M.k
-        u3 = (46 .<= U .<= 57) .* M.A
-        u4 = (U .>= 58) * M.e
+        u2 = (33 .< U .<= 45) * M.k
+        u3 = (45 .< U .<= 57) .* M.A
+        u4 = (U .> 57) * M.e
         return u1 + u2 + u3 + u4
     end
     M.A .= clamp.(aux_update(M.U), 0, 1)

@@ -2,15 +2,15 @@ using Observables, Dates, GLMakie
 
 const MUTATION_RATE = 0.01
 
-function update_update(M::MNCA)
+function update_update!(M::MNCA)
     function continuous_update(M::MNCA)
         conv(M.A, M.K[1], M.U)
         M.G .= (M.δ[1].(M.U) .* M.A)
         function aux_update(U)
-            u1 = (U .<= 33) * M.r 
-            u2 = (34 .<= U .<= 45) * M.k
-            u3 = (46 .<= U .<= 57) .* M.A
-            u4 = (U .>= 58) * M.e
+            u1 = (U .<= M.update_thresholds["1"]) * M.r 
+            u2 = (M.update_thresholds["1"] .< U .<= M.update_thresholds["2"]) * M.k
+            u3 = (M.update_thresholds["2"] .< U .<= M.update_thresholds["3"]) .* M.A
+            u4 = (U .> M.update_thresholds["3"]) * M.e
             return u1 + u2 + u3 + u4
         end
         M.A .= clamp.(aux_update(M.U), 0, 1)
@@ -49,12 +49,18 @@ function simulate(M; resolution=(1280, 720), fps = 24)
     # dims, = size(M.K[1])
     # mid = dims ÷ 2
     # r = M.R
+    
     or = Observable(M.r)
     ok = Observable(M.k)
     oe = Observable(M.e)
 
-    params = ["e"=> oe, "k" => ok, "r"=> or] |> Dict
+    uts1 = Observable(M.update_thresholds["1"])
+    uts2 = Observable(M.update_thresholds["2"])
+    uts3 = Observable(M.update_thresholds["3"])
 
+
+    params = ["e"=> oe, "k" => ok, "r"=> or, "ut1" => uts1,"ut2" => uts2, "ut3" => uts3] |> Dict
+    # params = merge(params, M.update_thresholds)
     labels = []
     # props_obs[key] = Observable(value)
     
@@ -133,65 +139,102 @@ function simulate(M; resolution=(1280, 720), fps = 24)
             elseif event.key == Keyboard.d
 
                 dr, dk, de = sort(rand(3)/10)
+                
                 M.r += rand([-1, 1])*dr
                 M.k += rand([-1, 1])*dk
                 M.e += rand([-1, 1])*de
                 params["r"][] = M.r
                 params["k"][] = M.k
                 params["e"][] = M.e
-                function continuous_update(M::MNCA)
-                    conv(M.A, M.K[1], M.U)
-                    M.G .= (M.δ[1].(M.U) .* M.A)
-                    function aux_update(U)
-                        u1 = (U .<= 33) * M.r 
-                        u2 = (34 .<= U .<= 45) * M.k
-                        u3 = (46 .<= U .<= 57) .* M.A
-                        u4 = (U .>= 58) * M.e
-                        return u1 + u2 + u3 + u4
-                    end
-                    M.A .= clamp.(aux_update(M.U), 0, 1)
-                end
-                M.Φ[1] = continuous_update
-                # A += cu(bitrand(SIZE, SIZE)*1.0)
-                # A = clamp.(A, 0, 1)
-                # B = CUDA.zeros(SIZE, SIZE)
+
+                update_update!(M)
+
+            elseif event.key == Keyboard.f
+
+                d1, d2, d3 = sort(rand(3)/10)
+                
+                M.update_thresholds["1"] += rand([-1, 1])*d1
+                M.update_thresholds["2"] += rand([-1, 1])*d2
+                M.update_thresholds["3"] += rand([-1, 1])*d3
+                params["ut1"][] = M.update_thresholds["1"]
+                params["ut2"][] = M.update_thresholds["2"]
+                params["ut3"][] = M.update_thresholds["3"]
+
+                update_update!(M)
+
+            elseif event.key == Keyboard.y
+                # dr = M.r/20
+                d1 = MUTATION_RATE*10
+                M.update_thresholds["1"] -= d1
+                params["ut1"][] = M.update_thresholds["1"]
+                update_update!(M)
+            elseif event.key == Keyboard.u
+                # dr = M.r/20
+                d1 = MUTATION_RATE*10
+                M.update_thresholds["1"] += d1
+                params["ut1"][] = M.update_thresholds["1"]
+                update_update!(M)
+            elseif event.key == Keyboard.i
+                # dr = M.r/20
+                d2 = MUTATION_RATE*10
+                M.update_thresholds["2"] -= d2
+                params["ut2"][] = M.update_thresholds["2"]
+                update_update!(M)
+            elseif event.key == Keyboard.o
+                # dr = M.r/20
+                d2 = MUTATION_RATE*10
+                M.update_thresholds["2"] += d2
+                params["ut2"][] = M.update_thresholds["2"]
+                update_update!(M)          
+            elseif event.key == Keyboard.l
+                # dr = M.r/20
+                d3 = MUTATION_RATE*10
+                M.update_thresholds["3"] -= d3
+                params["ut3"][] = M.update_thresholds["3"]
+                update_update!(M)
+            elseif event.key == Keyboard.p
+                
+                d3 = MUTATION_RATE*10
+                M.update_thresholds["3"] += d3
+                params["ut3"][] = M.update_thresholds["3"]
+                update_update!(M)                      
+           
             elseif event.key == Keyboard.h
                 # dr = M.r/20
                 dr = MUTATION_RATE
                 M.r += dr
                 params["r"][] = M.r
-                update_update(M)
+                update_update!(M)
             elseif event.key == Keyboard.b
                 # dr = M.r/20
                 dr = MUTATION_RATE
                 M.r -= dr
                 params["r"][] = M.r
-                update_update(M)
+                update_update!(M)
             elseif event.key == Keyboard.j
                 # dk = M.k/20
                 dk = MUTATION_RATE
                 M.k += dk
                 params["k"][] = M.k
-                update_update(M)
+                update_update!(M)
             elseif event.key == Keyboard.n
                 # dk = M.k/20
                 dk = MUTATION_RATE
                 M.k -= dk
                 params["k"][] = M.k
-                update_update(M)
-
+                update_update!(M)
             elseif event.key == Keyboard.k
                 # de = M.e/20
                 de = MUTATION_RATE
                 M.e += de
                 params["e"][] = M.e
-                update_update(M)
+                update_update!(M)
             elseif event.key == Keyboard.m
                 # de = M.e/20
                 de = MUTATION_RATE
                 M.e -= de
                 params["e"][] = M.e
-                update_update(M)                                             
+                update_update!(M)                                             
 
 
             elseif event.key == Keyboard.r
