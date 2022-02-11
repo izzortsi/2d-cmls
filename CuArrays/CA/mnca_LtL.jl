@@ -4,6 +4,10 @@ using LinearAlgebra
 using LazyGrids
 using Random
 using GLMakie
+# %%
+using Images, TestImages, Colors
+using OffsetArrays
+using FileIO
 #%%
 const SIZE = 1 << 9
 const MID = SIZE ÷ 2
@@ -124,20 +128,36 @@ mutable struct MNCA
     end
 end
 #%%
-# K2 = [0. 0. 1. 1. 1. 1. 1. 1. 1. 0. 0.;
-# 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0.;
-# 1. 0. 0. 1. 1. 1. 1. 1. 0. 0. 1.;
-# 1. 0. 1. 1. 0. 0. 0. 1. 1. 0. 1.;
-# 1. 0. 1. 0. 1. 1. 1. 0. 1. 0. 1.;
-# 1. 0. 1. 0. 1. 0. 1. 0. 1. 0. 1.;
-# 1. 0. 1. 0. 1. 1. 1. 0. 1. 0. 1.;
-# 1. 0. 1. 1. 0. 0. 0. 1. 1. 0. 1.;
-# 1. 0. 0. 1. 1. 1. 1. 1. 0. 0. 1.;
-# 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0.;
-# 0. 0. 1. 1. 1. 1. 1. 1. 1. 0. 0.;]
+K2 = [0. 0. 1. 1. 1. 1. 1. 1. 1. 0. 0.;
+0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0.;
+1. 0. 0. 1. 1. 1. 1. 1. 0. 0. 1.;
+1. 0. 1. 1. 0. 0. 0. 1. 1. 0. 1.;
+1. 0. 1. 0. 1. 1. 1. 0. 1. 0. 1.;
+1. 0. 1. 0. 1. 0. 1. 0. 1. 0. 1.;
+1. 0. 1. 0. 1. 1. 1. 0. 1. 0. 1.;
+1. 0. 1. 1. 0. 0. 0. 1. 1. 0. 1.;
+1. 0. 0. 1. 1. 1. 1. 1. 0. 0. 1.;
+0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0.;
+0. 0. 1. 1. 1. 1. 1. 1. 1. 0. 0.;]
+# %%
+M.K[1] = K2
 #%%
 # heatmap(K2)
+# %%
 
+img = load("C:\\Users\\igor-\\.cloned\\2d-dynamics\\CuArrays\\CA\\IMG_20220209_034320.jpg")
+# img = imresize(img, ratio = 1 / 3)
+img = imresize(img, (SIZE, SIZE))
+typeof(img)
+img_array = Gray.(img) .|> Base.Float32
+typeof(img_array .|> Base.Float32)
+# %%
+
+# %%
+
+
+# %%
+istate = cu(img_array)
 
 #%%
 A = zeros(SIZE, SIZE) |> cu
@@ -310,7 +330,7 @@ include("sim_man_gol_mutation.jl")
 
 #%%
 
-simulate(M, fps=30)
+simulate(M, fps=30, initial_config = istate)
 #%%
 
 

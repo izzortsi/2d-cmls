@@ -19,7 +19,7 @@ function update_update!(M::MNCA)
 end
 
 
-function simulate(M; resolution=(1280, 720), fps = 24)
+function simulate(M; resolution=(1280, 720), fps = 24, initial_config = nothing)
     
 
 
@@ -111,30 +111,57 @@ function simulate(M; resolution=(1280, 720), fps = 24)
                 dnA[] = M.A
 
             elseif event.key == Keyboard.c
-                
-                A = CUDA.zeros(SIZE, SIZE)
-                M.A .= A
-                M.U .= A
-                M.G .= A
-                populate(M.A, creature["cells"], 100)
-                M.update!(M)
-                dnA[] = M.A
-                dnU[] = M.U
-                dnG[] = M.G
+                if initial_config === nothing
+                    A = CUDA.zeros(SIZE, SIZE)
+                    M.A .= A
+                    M.U .= A
+                    M.G .= A
+                    populate(M.A, creature["cells"], 100)
+                    M.update!(M)
+                    dnA[] = M.A
+                    dnU[] = M.U
+                    dnG[] = M.G
+                else
+                    A = initial_config
+                    M.A .= A
+                    M.U .= A
+                    M.G .= A
+                    populate(M.A, creature["cells"], 100)
+                    M.update!(M)
+                    dnA[] = M.A
+                    dnU[] = M.U
+                    dnG[] = M.G
+                end                    
 
             elseif event.key == Keyboard.v
-                A = CUDA.rand(SIZE, SIZE)
-                # A += cu(bitrand(SIZE, SIZE)*1.0)
-                # A = clamp.(A, 0, 1)
-                # B = CUDA.zeros(SIZE, SIZE)
-                M.A .= A
-                M.U .= A
-                M.G .= A
-                
-                M.update!(M)
-                dnA[] = M.A
-                dnU[] = M.U
-                dnG[] = M.G
+                if initial_config === nothing
+                    A = CUDA.rand(SIZE, SIZE)
+                    # A += cu(bitrand(SIZE, SIZE)*1.0)
+                    # A = clamp.(A, 0, 1)
+                    # B = CUDA.zeros(SIZE, SIZE)
+                    M.A .= A
+                    M.U .= A
+                    M.G .= A
+                    
+                    M.update!(M)
+                    dnA[] = M.A
+                    dnU[] = M.U
+                    dnG[] = M.G
+                else
+                    A = initial_config
+                    # A += cu(bitrand(SIZE, SIZE)*1.0)
+                    # A = clamp.(A, 0, 1)
+                    # B = CUDA.zeros(SIZE, SIZE)
+                    M.A .= A
+                    M.U .= A
+                    M.G .= A
+                    
+                    M.update!(M)
+                    dnA[] = M.A
+                    dnU[] = M.U
+                    dnG[] = M.G
+                end
+
 
             elseif event.key == Keyboard.d
 
