@@ -128,39 +128,38 @@ mutable struct MNCA
     end
 end
 #%%
-K2 = [0. 0. 1. 1. 1. 1. 1. 1. 1. 0. 0.;
-0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0.;
-1. 0. 0. 1. 1. 1. 1. 1. 0. 0. 1.;
-1. 0. 1. 1. 0. 0. 0. 1. 1. 0. 1.;
-1. 0. 1. 0. 1. 1. 1. 0. 1. 0. 1.;
-1. 0. 1. 0. 1. 0. 1. 0. 1. 0. 1.;
-1. 0. 1. 0. 1. 1. 1. 0. 1. 0. 1.;
-1. 0. 1. 1. 0. 0. 0. 1. 1. 0. 1.;
-1. 0. 0. 1. 1. 1. 1. 1. 0. 0. 1.;
-0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0.;
-0. 0. 1. 1. 1. 1. 1. 1. 1. 0. 0.;]
-# %%
-M.K[1] = K2
+# K2 = [0. 0. 1. 1. 1. 1. 1. 1. 1. 0. 0.;
+# 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0.;
+# 1. 0. 0. 1. 1. 1. 1. 1. 0. 0. 1.;
+# 1. 0. 1. 1. 0. 0. 0. 1. 1. 0. 1.;
+# 1. 0. 1. 0. 1. 1. 1. 0. 1. 0. 1.;
+# 1. 0. 1. 0. 1. 0. 1. 0. 1. 0. 1.;
+# 1. 0. 1. 0. 1. 1. 1. 0. 1. 0. 1.;
+# 1. 0. 1. 1. 0. 0. 0. 1. 1. 0. 1.;
+# 1. 0. 0. 1. 1. 1. 1. 1. 0. 0. 1.;
+# 0. 1. 0. 0. 0. 0. 0. 0. 0. 1. 0.;
+# 0. 0. 1. 1. 1. 1. 1. 1. 1. 0. 0.;]
+# # %%
+
 #%%
 # heatmap(K2)
 # %%
+function init_state(img_seed::Bool = false)
 
-img = load("C:\\Users\\igor-\\.cloned\\2d-dynamics\\CuArrays\\CA\\IMG_20220209_034320.jpg")
-# img = imresize(img, ratio = 1 / 3)
-img = imresize(img, (SIZE, SIZE))
-typeof(img)
-img_array = Gray.(img) .|> Base.Float32
-typeof(img_array .|> Base.Float32)
-# %%
-
-# %%
-
-
-# %%
-istate = cu(img_array)
-
+    if img_seed == true
+        img = load("C:\\Users\\igor-\\.cloned\\2d-dynamics\\CuArrays\\CA\\IMG_20220209_034320.jpg")
+    # img = imresize(img, ratio = 1 / 3)
+        img = imresize(img, (SIZE, SIZE))
+        # typeof(img)
+        img_array = Gray.(img) .|> Base.Float32
+        # typeof(img_array .|> Base.Float32)
+        istate = cu(img_array)
+    else
+        istate = zeros(SIZE, SIZE) |> cu
+    end
+end
 #%%
-A = zeros(SIZE, SIZE) |> cu
+A = init_state()
 
 bin=Float32(0.93) 
 r=Float32(0.0) 
@@ -330,42 +329,42 @@ include("sim_man_gol_mutation.jl")
 
 #%%
 
-simulate(M, fps=30, initial_config = istate)
+simulate(M, fps=30, initial_config = nothing)
 #%%
 
 
 
-function run(M::MNCA)
+# function run(M::MNCA)
 
-    #fig, nA, nU, nG = panels(A, M)
+#     #fig, nA, nU, nG = panels(A, M)
 
-    fps = 60
-    nframes = 360
+#     fps = 60
+#     nframes = 360
 
-    for i = 1:nframes
-        M.Φ[1](M)
-        dnA[] = M.A
-        dnU[] = M.U
-        dnG[] = M.G
-        sleep(1/fps) # refreshes the display!
-    end
-end
-#%%
-#run(M)
-#%%
+#     for i = 1:nframes
+#         M.Φ[1](M)
+#         dnA[] = M.A
+#         dnU[] = M.U
+#         dnG[] = M.G
+#         sleep(1/fps) # refreshes the display!
+#     end
+# end
+# #%%
+# #run(M)
+# #%%
 
-function record_run(fig, M; nframes = 600, fps=36)
-    opath = pwd() * "/CuArrays/outputs/" * "lenia/"
-    mkpath(opath)
-    GLMakie.record(fig, opath * "mnca_gol.mp4", 1:nframes; framerate = fps) do i
-        M.Φ[1](M)
-        M.Φ[2](M)
-        nA[] = M.A
-        nU[] = M.U
-        nG[] = M.G
-        sleep(1/fps) # refreshes the display!
-    end
-end
+# function record_run(fig, M; nframes = 600, fps=36)
+#     opath = pwd() * "/CuArrays/outputs/" * "lenia/"
+#     mkpath(opath)
+#     GLMakie.record(fig, opath * "mnca_gol.mp4", 1:nframes; framerate = fps) do i
+#         M.Φ[1](M)
+#         M.Φ[2](M)
+#         nA[] = M.A
+#         nU[] = M.U
+#         nG[] = M.G
+#         sleep(1/fps) # refreshes the display!
+#     end
+# end
 
 #%%
 
