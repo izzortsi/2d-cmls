@@ -1,5 +1,5 @@
 # 2d-dynamics
-repository for archiving experiments with various of families of "spatially" two-dimensional dynamical systems.
+repository for archiving experiments with various families of "spatially" two-dimensional dynamical systems.
 
 ##### A Julia implementation of [Lenia](https://github.com/Chakazul/Lenia):
 
